@@ -19,13 +19,13 @@ async function sleep(ms) {
 }
 
 // --- CORE: Load Data ---
-function loadPendingJobs() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+function loadPendingJobs(filePath = EXCEL_PATH) {
+    if (!fs.existsSync(filePath)) {
         log('ERROR', 'Excel file not found.');
         return [];
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsx.readFile(filePath);
     
     // Read Accounts
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
@@ -201,6 +201,15 @@ async function runScheduler() {
 }
 
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
+
+module.exports = {
+    loadPendingJobs,
+    runScheduler,
+    processJob,
+    updateJobStatus
+};
