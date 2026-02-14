@@ -1,12 +1,16 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Configuration
 const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 
-// MOCK LLM CALL (Replace with real Gemini/GPT call later)
-async function generatePostText(persona, topic) {
+// Initialize Gemini
+let genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+
+function generateMockPostText(persona, topic) {
     // Simulation of Natural Variation
     const variations = [
         `Just thinking about ${topic}... 🤔`,
@@ -23,6 +27,30 @@ async function generatePostText(persona, topic) {
     if (persona.type === 'policy_analyst') text = `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`;
     
     return text;
+}
+
+// MOCK LLM CALL (Replace with real Gemini/GPT call later)
+async function generatePostText(persona, topic) {
+    if (genAI) {
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+            const prompt = `Act as a social media user with the persona type '${persona.type}'.
+            Write a short, engaging post about '${topic}'.
+            Keep it under 280 characters.
+            If the persona is 'shitposter', be chaotic, use lowercase, no periods, maybe memes.
+            If the persona is 'policy_analyst', be serious, use data, analytical tone.`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            return response.text().trim();
+        } catch (error) {
+            console.warn("⚠️ Gemini API call failed, falling back to mock:", error.message);
+        }
+    } else {
+        console.warn("⚠️ GEMINI_API_KEY not found, using mock implementation.");
+    }
+
+    return generateMockPostText(persona, topic);
 }
 
 async function runContentEngine() {
@@ -70,4 +98,13 @@ async function runContentEngine() {
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
 
-runContentEngine();
+if (require.main === module) {
+    runContentEngine();
+}
+
+module.exports = {
+    generatePostText,
+    runContentEngine,
+    // For testing
+    setGenAI: (instance) => { genAI = instance; }
+};

@@ -6,14 +6,16 @@
   "scripts": {
     "start": "node scheduler.js",
     "init": "node scripts/generate_master_excel.js",
+    "test": "node --test tests/*.test.js",
     "post:twitter": "node scripts/post_twitter.js",
     "post:instagram": "node scripts/post_instagram.js",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
-    "puppeteer": "^24.2.1",
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^16.4.5",
     "luxon": "^3.4.4",
-    "dotenv": "^16.4.5"
+    "puppeteer": "^24.2.1",
+    "xlsx": "^0.18.5"
   }
 }
