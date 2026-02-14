@@ -54,9 +54,11 @@ function loadPendingJobs() {
 }
 
 // --- CORE: Worker (REAL PUPPETEER) ---
-const puppeteer = require('puppeteer');
+const puppeteerLib = require('puppeteer');
 
-async function processJob(job) {
+async function processJob(job, deps = {}) {
+    const puppeteer = deps.puppeteer || puppeteerLib;
+    const sleepFn = deps.sleep || sleep;
     const { post_id, account, content_text } = job;
     log('INFO', `Starting Job: ${post_id} for ${account.username}`);
 
@@ -77,7 +79,7 @@ async function processJob(job) {
         await page.keyboard.press('Enter');
         
         // Wait for potential "Verify" or Password
-        await new Promise(r => setTimeout(r, 2000));
+        await sleepFn(2000);
         
         // Check if asking for password directly or phone/email first
         // Simple logic: Look for password field. If not there, look for text input (challenge)
@@ -98,28 +100,28 @@ async function processJob(job) {
             // REPLY / QUOTE Mode
             console.log(`   ↳ Target: ${job.target_url}`);
             await page.goto(job.target_url, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 2000));
+            await sleepFn(2000);
 
             // Click Reply (Simplest integration)
             // Selector for Reply icon often in [data-testid="reply"]
             await page.click('div[data-testid="reply"]');
-            await new Promise(r => setTimeout(r, 1000));
+            await sleepFn(1000);
             
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 500));
+            await sleepFn(500);
             
             await page.click('div[data-testid="tweetButton"]');
         } else {
             // NEW POST Mode
             await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
-            await new Promise(r => setTimeout(r, 2000));
+            await sleepFn(2000);
             
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 1000));
+            await sleepFn(1000);
             
             await page.click('div[data-testid="tweetButton"]');
         }
-        await new Promise(r => setTimeout(r, 5000)); // Wait for send
+        await sleepFn(5000); // Wait for send
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
         return { success: true };
@@ -201,6 +203,13 @@ async function runScheduler() {
 }
 
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
+
+module.exports = {
+    processJob,
+    sleep
+};
