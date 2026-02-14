@@ -22,7 +22,7 @@ async function sleep(ms) {
 function loadPendingJobs() {
     if (!fs.existsSync(EXCEL_PATH)) {
         log('ERROR', 'Excel file not found.');
-        return [];
+        return { pendingJobs: [] };
     }
 
     const workbook = xlsx.readFile(EXCEL_PATH);
@@ -53,84 +53,39 @@ function loadPendingJobs() {
     return { workbook, pendingJobs };
 }
 
-// --- CORE: Worker (REAL PUPPETEER) ---
-const puppeteer = require('puppeteer');
-
+// --- CORE: Worker (PLATFORM AGNOSTIC) ---
 async function processJob(job) {
     const { post_id, account, content_text } = job;
-    log('INFO', `Starting Job: ${post_id} for ${account.username}`);
+    log('INFO', `Starting Job: ${post_id} for ${account.username} on ${account.platform}`);
 
-    let browser;
     try {
-        browser = await puppeteer.launch({
-            headless: false, // Visible for now
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
-        
-        // 1. LOGIN (Simplified for X)
-        await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
-        
-        // Username
-        await page.waitForSelector('input[autocomplete="username"]');
-        await page.type('input[autocomplete="username"]', account.username);
-        await page.keyboard.press('Enter');
-        
-        // Wait for potential "Verify" or Password
-        await new Promise(r => setTimeout(r, 2000));
-        
-        // Check if asking for password directly or phone/email first
-        // Simple logic: Look for password field. If not there, look for text input (challenge)
+        if (!account.platform) {
+            throw new Error('Platform not specified for account');
+        }
+
+        let platformModule;
         try {
-            await page.waitForSelector('input[name="password"]', { timeout: 3000 });
-        } catch(e) {
-            // Challenge? Assume it might be email/phone if configured, or just retry password
-            // For now, assume straight to password or fail
-            log('WARN', 'Password field not found immediately. Possible challenge.');
+            platformModule = require(`./platforms/${account.platform}`);
+        } catch (e) {
+            throw new Error(`Platform module not found for: ${account.platform}`);
         }
 
-        await page.type('input[name="password"]', account.password);
-        await page.keyboard.press('Enter');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-        // 2. ACTION LOGIC
-        if (job.target_url) {
-            // REPLY / QUOTE Mode
-            console.log(`   ↳ Target: ${job.target_url}`);
-            await page.goto(job.target_url, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 2000));
-
-            // Click Reply (Simplest integration)
-            // Selector for Reply icon often in [data-testid="reply"]
-            await page.click('div[data-testid="reply"]');
-            await new Promise(r => setTimeout(r, 1000));
-            
-            await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 500));
-            
-            await page.click('div[data-testid="tweetButton"]');
-        } else {
-            // NEW POST Mode
-            await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
-            await new Promise(r => setTimeout(r, 2000));
-            
-            await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 1000));
-            
-            await page.click('div[data-testid="tweetButton"]');
+        // Ensure logs directory exists
+        if (!fs.existsSync('logs')) {
+             fs.mkdirSync('logs');
         }
-        await new Promise(r => setTimeout(r, 5000)); // Wait for send
+
+        await platformModule.post(account, content_text, {
+            target_url: job.target_url,
+            post_id: post_id
+        });
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
         return { success: true };
 
     } catch (error) {
         log('ERROR', `Failed Job ${post_id}: ${error.message}`);
-        // Take screenshot on failure
-        if (browser) await browser.pages().then(p => p[0].screenshot({ path: `logs/fail_${post_id}.png` }));
         return { success: false, error: error.message };
-    } finally {
-        if (browser) await browser.close();
     }
 }
 
@@ -163,7 +118,7 @@ async function runScheduler() {
         log('SYSTEM', 'Checking for pending jobs...');
         const { workbook, pendingJobs } = loadPendingJobs();
 
-        if (pendingJobs.length === 0) {
+        if (!pendingJobs || pendingJobs.length === 0) {
             log('SYSTEM', 'No pending jobs found.');
             isRunning = false;
             return;
@@ -201,6 +156,15 @@ async function runScheduler() {
 }
 
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
+
+module.exports = {
+    loadPendingJobs,
+    processJob,
+    updateJobStatus,
+    runScheduler
+};
