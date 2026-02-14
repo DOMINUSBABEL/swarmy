@@ -32,7 +32,7 @@ async function runSwarmAttack() {
 
     // Process sequentially to avoid RAM explosion
     for (const soldier of squad) {
-        console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
+        console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
         
         try {
             const browser = await puppeteer.launch({
@@ -115,4 +115,8 @@ async function runSwarmAttack() {
     }
 }
 
-runSwarmAttack();
+if (require.main === module) {
+    runSwarmAttack();
+}
+
+module.exports = { runSwarmAttack };
