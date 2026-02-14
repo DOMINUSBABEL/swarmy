@@ -12,7 +12,8 @@ const COMMENTS = {
     'acc_samuel': "La claridad conceptual es lo que necesitamos en el debate público. Muy buen punto, doctor. 👏",
     'acc_mariate': "Totalmente de acuerdo. La ciudad necesita más de esta visión y menos ruido. #Medellin",
     'acc_daniel': "Interesante planteamiento. ¿Cómo se articularía esto con el plan de inversiones actual? 🤔",
-    'acc_nguerrero': "Esto es lo que nadie se atreve a decir. RT masivo."
+    'acc_nguerrero': "Esto es lo que nadie se atreve a decir. RT masivo.",
+    'acc_revistavoces': "📢 [AHORA] El Concejal Luis Guillermo Vélez marca la pauta sobre el debate de ciudad. Hilo recomendado 👇"
 };
 
 async function runSwarmAttack() {
@@ -21,8 +22,8 @@ async function runSwarmAttack() {
     const workbook = xlsx.readFile(EXCEL_PATH);
     const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
     
-    // Filter only our 4 REAL soldiers
-    const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero'].includes(a.account_id));
+    // Filter only our 5 REAL soldiers
+    const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
 
     if (squad.length === 0) {
         console.error("❌ No active soldiers found.");

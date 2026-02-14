@@ -55,10 +55,21 @@ function generateMasterExcel() {
             status: 'active',
             persona_type: 'shitposter', // Caos controlado
             content_lines: 'memes, rant'
+        },
+        {
+            account_id: 'acc_revistavoces',
+            platform: 'twitter',
+            username: 'RevistavocesD',
+            password: 'Febrero202630',
+            auth_token: '',
+            proxy: '',
+            status: 'active',
+            persona_type: 'news_outlet', // Nuevo Rol: Medio
+            content_lines: 'news, headlines'
         }
     ];
 
-    // Add placeholder slots for remaining 6 to reach 10
+    // Add placeholder slots for remaining 5 to reach 10
     for (let i = 5; i <= 10; i++) {
         accountsData.push({
             account_id: `account_${String(i).padStart(2, '0')}`,
