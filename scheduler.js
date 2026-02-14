@@ -1,0 +1,148 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+const { DateTime } = require('luxon');
+
+// Config
+const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
+const MAX_CONCURRENT_WORKERS = 3; // Adjust based on RAM (approx 500MB per browser)
+const POLL_INTERVAL_MS = 60 * 1000; // Check every minute
+
+// State
+let isRunning = false;
+
+// Mock Logger
+const log = (type, msg) => console.log(`[${new Date().toISOString()}] [${type}] ${msg}`);
+
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// --- CORE: Load Data ---
+function loadPendingJobs() {
+    if (!fs.existsSync(EXCEL_PATH)) {
+        log('ERROR', 'Excel file not found.');
+        return [];
+    }
+
+    const workbook = xlsx.readFile(EXCEL_PATH);
+    
+    // Read Accounts
+    const accountsSheet = workbook.Sheets['ACCOUNTS'];
+    const accounts = xlsx.utils.sheet_to_json(accountsSheet);
+    const activeAccounts = accounts.filter(a => a.status === 'active');
+    const accountMap = new Map(activeAccounts.map(a => [a.account_id, a]));
+
+    // Read Calendar
+    const calendarSheet = workbook.Sheets['CALENDAR'];
+    const posts = xlsx.utils.sheet_to_json(calendarSheet);
+
+    const now = DateTime.now();
+
+    // Filter Jobs: Status 'approved' AND Scheduled Time <= Now
+    const pendingJobs = posts.filter(post => {
+        if (post.status !== 'approved') return false;
+        
+        const scheduledTime = DateTime.fromFormat(post.scheduled_date, 'yyyy-MM-dd HH:mm');
+        return scheduledTime <= now;
+    }).map(post => ({
+        ...post,
+        account: accountMap.get(post.account_id)
+    })).filter(job => job.account); // Ensure account exists and is active
+
+    return { workbook, pendingJobs };
+}
+
+// --- CORE: Worker ---
+async function processJob(job) {
+    const { post_id, account, platform, content_text } = job;
+    log('INFO', `Starting Job: ${post_id} for ${account.account_id} (${account.platform})`);
+
+    try {
+        // DYNAMIC IMPORT based on platform
+        // In real version: require(`./platforms/${account.platform}`).post(account, content_text);
+        
+        // Simulation for MVP
+        await sleep(3000); // Simulate browser opening
+        
+        if (Math.random() > 0.8) throw new Error("Random Network Error (Simulated)");
+        
+        log('SUCCESS', `Posted: ${post_id} on ${account.username}`);
+        return { success: true };
+
+    } catch (error) {
+        log('ERROR', `Failed Job ${post_id}: ${error.message}`);
+        return { success: false, error: error.message };
+    }
+}
+
+// --- CORE: Update Excel ---
+function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
+    const sheet = workbook.Sheets['CALENDAR'];
+    const data = xlsx.utils.sheet_to_json(sheet);
+    
+    const rowIndex = data.findIndex(row => row.post_id === postId);
+    if (rowIndex === -1) return;
+
+    // Direct cell update (simplest for xlsx lib without keeping strict format, 
+    // real impl might need to read/write carefully to preserve formulas if any)
+    // Here we just update the JSON and rewrite the sheet.
+    
+    data[rowIndex].status = newStatus;
+    if (errorMsg) data[rowIndex].error_log = errorMsg; // Add error column if needed
+
+    const newSheet = xlsx.utils.json_to_sheet(data);
+    workbook.Sheets['CALENDAR'] = newSheet;
+    xlsx.writeFile(workbook, EXCEL_PATH);
+}
+
+// --- ORCHESTRATOR ---
+async function runScheduler() {
+    if (isRunning) return;
+    isRunning = true;
+
+    try {
+        log('SYSTEM', 'Checking for pending jobs...');
+        const { workbook, pendingJobs } = loadPendingJobs();
+
+        if (pendingJobs.length === 0) {
+            log('SYSTEM', 'No pending jobs found.');
+            isRunning = false;
+            return;
+        }
+
+        log('SYSTEM', `Found ${pendingJobs.length} pending jobs. Processing with concurrency ${MAX_CONCURRENT_WORKERS}...`);
+
+        // Queue Processor
+        let activeWorkers = 0;
+        let jobIndex = 0;
+
+        while (jobIndex < pendingJobs.length || activeWorkers > 0) {
+            // Spawn workers if slots available
+            while (activeWorkers < MAX_CONCURRENT_WORKERS && jobIndex < pendingJobs.length) {
+                const job = pendingJobs[jobIndex++];
+                activeWorkers++;
+
+                processJob(job).then(result => {
+                    const status = result.success ? 'published' : 'failed';
+                    updateJobStatus(workbook, job.post_id, status, result.error);
+                    activeWorkers--;
+                });
+            }
+            
+            // Wait a bit before checking slots again to save CPU
+            await sleep(500);
+        }
+
+    } catch (e) {
+        log('CRITICAL', `Scheduler crashed: ${e.message}`);
+    } finally {
+        isRunning = false;
+        log('SYSTEM', 'Batch finished.');
+    }
+}
+
+// Start
+log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+setInterval(runScheduler, POLL_INTERVAL_MS);
+runScheduler(); // Initial run
