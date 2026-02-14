@@ -26,16 +26,23 @@ function auditSwarm() {
     
     let auditReport = [];
 
+    // Optimized: Single pass iteration
+    let failedCount = 0;
+    let weakCount = 0;
+
+    for (const p of calendar) {
+        if (p.status === 'failed') failedCount++;
+        if (p.content_text && p.content_text.length < 20) weakCount++;
+    }
+
     // 1. Check for Compromised Agents (Inactive or Failed)
-    const failedPosts = calendar.filter(p => p.status === 'failed');
-    if (failedPosts.length > 0) {
-        auditReport.push(`⚠️ ALERT: ${failedPosts.length} posts failed. Investigating proxies.`);
+    if (failedCount > 0) {
+        auditReport.push(`⚠️ ALERT: ${failedCount} posts failed. Investigating proxies.`);
     }
 
     // 2. Check for Quality Control (Quality Assurance)
-    const weakPosts = calendar.filter(p => p.content_text && p.content_text.length < 20);
-    if (weakPosts.length > 0) {
-        auditReport.push(`📉 QUALITY: ${weakPosts.length} posts are too short (Low Effort). Talleyrand, improve prompts.`);
+    if (weakCount > 0) {
+        auditReport.push(`📉 QUALITY: ${weakCount} posts are too short (Low Effort). Talleyrand, improve prompts.`);
     }
 
     // 3. Optimization Suggestion
@@ -59,4 +66,8 @@ function auditSwarm() {
     }
 }
 
-auditSwarm();
+if (require.main === module) {
+    auditSwarm();
+}
+
+module.exports = { auditSwarm };
