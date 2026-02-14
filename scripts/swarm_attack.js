@@ -34,7 +34,7 @@ async function runSwarmAttack(deps = {}) {
 
     // Process sequentially to avoid RAM explosion
     for (const soldier of squad) {
-        console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
+        console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
         
         let browser;
         try {
