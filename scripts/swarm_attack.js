@@ -16,11 +16,14 @@ const COMMENTS = {
     'acc_revistavoces': "📢 [AHORA] El Concejal Luis Guillermo Vélez marca la pauta sobre el debate de ciudad. Hilo recomendado 👇"
 };
 
-async function runSwarmAttack() {
+async function runSwarmAttack(deps = {}) {
+    const p = deps.puppeteer || puppeteer;
+    const x = deps.xlsx || xlsx;
+
     console.log(`🐝 SWARM ATTACK INITIATED against: ${TARGET_URL}`);
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+    const workbook = x.readFile(EXCEL_PATH);
+    const accounts = x.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
     
     // Filter only our 5 REAL soldiers
     const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
@@ -34,8 +37,9 @@ async function runSwarmAttack() {
     for (const soldier of squad) {
         console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
         
+        let browser;
         try {
-            const browser = await puppeteer.launch({
+            browser = await p.launch({
                 headless: false, // Visible for debugging/human-like behavior
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
@@ -107,12 +111,20 @@ async function runSwarmAttack() {
             }
 
             await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            await browser.close();
+            // Browser will be closed in finally block
 
         } catch (e) {
             console.error(`   ❌ FAILED: ${e.message}`);
+        } finally {
+            if (browser) {
+                await browser.close();
+            }
         }
     }
 }
 
-runSwarmAttack();
+if (require.main === module) {
+    runSwarmAttack();
+}
+
+module.exports = { runSwarmAttack };
