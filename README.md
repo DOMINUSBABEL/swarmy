@@ -38,7 +38,10 @@ Para evitar bloqueos de IP y colapso de hardware:
 ### Fase 1: Inicialización
 1.  Clonar el repositorio.
 2.  Instalar dependencias: `npm install`
-3.  Generar la matriz de control: `npm run init` (Crea el Excel base).
+3.  Configurar variables de entorno:
+    - Copiar `.env.template` a `.env`.
+    - Rellenar las contraseñas en `.env`.
+4.  Generar la matriz de control: `npm run init` (Crea el Excel base inyectando las credenciales).
 
 ### Fase 2: Configuración del Enjambre
 Abra `Master_Social_Creds.xlsx` y configure sus activos:

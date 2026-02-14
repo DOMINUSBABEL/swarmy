@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+
+# Generated Files
+Master_Social_Creds.xlsx
+logs/

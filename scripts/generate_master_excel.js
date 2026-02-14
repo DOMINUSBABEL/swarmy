@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require('fs');
 const xlsx = require('xlsx');
 
@@ -5,6 +6,18 @@ const xlsx = require('xlsx');
 const OUT_FILE = 'Master_Social_Creds.xlsx';
 
 function generateMasterExcel() {
+    // Warn if env vars are missing
+    const requiredVars = [
+        'ACC_SAMUEL_PASSWORD', 'ACC_MARIATE_PASSWORD', 'ACC_DANIEL_PASSWORD',
+        'ACC_NGUERRERO_PASSWORD', 'ACC_REVISTAVOCES_PASSWORD', 'ACC_CAMILA_PASSWORD',
+        'ACC_CONCEJO_X_PASSWORD'
+    ];
+    const missingVars = requiredVars.filter(v => !process.env[v]);
+    if (missingVars.length > 0) {
+        console.warn('⚠️ Missing environment variables for passwords:', missingVars.join(', '));
+        console.warn('⚠️ Using empty strings for missing passwords.');
+    }
+
     // FORCE OVERWRITE FOR CREDENTIAL INJECTION
     // if (fs.existsSync(OUT_FILE)) { console.log(`⚠️ ${OUT_FILE} already exists. Skipping.`); return; }
     if (fs.existsSync(OUT_FILE)) {
@@ -19,7 +32,7 @@ function generateMasterExcel() {
             account_id: 'acc_samuel',
             platform: 'twitter',
             username: 'Samuel_MendozCD',
-            password: 'febrero202627',
+            password: process.env.ACC_SAMUEL_PASSWORD || '',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -30,7 +43,7 @@ function generateMasterExcel() {
             account_id: 'acc_mariate',
             platform: 'twitter',
             username: 'mariatemonto',
-            password: 'febrero202628',
+            password: process.env.ACC_MARIATE_PASSWORD || '',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -41,7 +54,7 @@ function generateMasterExcel() {
             account_id: 'acc_daniel',
             platform: 'twitter',
             username: 'Daniel_VargasCc',
-            password: 'Habiaunavez205@',
+            password: process.env.ACC_DANIEL_PASSWORD || '',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -52,7 +65,7 @@ function generateMasterExcel() {
             account_id: 'acc_nguerrero',
             platform: 'twitter',
             username: 'NGuerrero16814',
-            password: 'Habiaunavez205@',
+            password: process.env.ACC_NGUERRERO_PASSWORD || '',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -63,7 +76,7 @@ function generateMasterExcel() {
             account_id: 'acc_revistavoces',
             platform: 'twitter',
             username: 'RevistavocesD',
-            password: 'Febrero202630',
+            password: process.env.ACC_REVISTAVOCES_PASSWORD || '',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -74,7 +87,7 @@ function generateMasterExcel() {
             account_id: 'acc_camila',
             platform: 'twitter',
             username: 'moreno_cam73152',
-            password: 'Habiaunavex205@',
+            password: process.env.ACC_CAMILA_PASSWORD || '',
             status: 'active',
             persona_type: 'general',
             content_lines: 'lifestyle'
@@ -83,7 +96,7 @@ function generateMasterExcel() {
             account_id: 'acc_concejo_x',
             platform: 'twitter',
             username: 'concejo38265',
-            password: 'febrero202631',
+            password: process.env.ACC_CONCEJO_X_PASSWORD || '',
             status: 'active',
             persona_type: 'policy_analyst',
             content_lines: 'politics'
