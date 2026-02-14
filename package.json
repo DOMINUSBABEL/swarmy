@@ -10,9 +10,10 @@
     "post:instagram": "node scripts/post_instagram.js"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
-    "puppeteer": "^24.2.1",
+    "dotenv": "^16.4.5",
     "luxon": "^3.4.4",
-    "dotenv": "^16.4.5"
+    "p-limit": "^7.3.0",
+    "puppeteer": "^24.2.1",
+    "xlsx": "^0.18.5"
   }
 }
