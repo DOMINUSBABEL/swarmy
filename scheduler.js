@@ -201,6 +201,10 @@ async function runScheduler() {
 }
 
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
+
+module.exports = { loadPendingJobs };
