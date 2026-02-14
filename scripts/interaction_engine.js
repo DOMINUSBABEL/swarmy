@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-
 // Configuration
 const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 
@@ -42,8 +41,16 @@ async function runInteractionPod() {
     const calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
     
     // Filter published posts from the last 24h
-    // (Mock filter for now)
-    const recentPosts = calendar.filter(p => p.status === 'published' || p.status === 'draft'); // Using draft for testing
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const recentPosts = calendar.filter(p => {
+        if (p.status !== 'published') return false;
+
+        const postDate = new Date(p.scheduled_date);
+        // Ensure valid date and within 24h window
+        return !isNaN(postDate.getTime()) && postDate >= twentyFourHoursAgo && postDate <= now;
+    });
 
     console.log(`🤝 Engagement Pod Active. Scanning ${recentPosts.length} posts...`);
 
@@ -83,10 +90,12 @@ async function runInteractionPod() {
         interactionSheet = xlsx.utils.json_to_sheet(interactions);
     }
     
-    // Remove old sheet if exists to replace
-    if (workbook.Sheets['INTERACTIONS']) delete workbook.Sheets['INTERACTIONS'];
-    
-    xlsx.utils.book_append_sheet(workbook, interactionSheet, 'INTERACTIONS');
+    // Replace or append the sheet
+    if (workbook.Sheets['INTERACTIONS']) {
+        workbook.Sheets['INTERACTIONS'] = interactionSheet;
+    } else {
+        xlsx.utils.book_append_sheet(workbook, interactionSheet, 'INTERACTIONS');
+    }
     xlsx.writeFile(workbook, EXCEL_PATH);
 
     console.log(`✅ Logged ${interactions.length} new interactions to perform.`);
