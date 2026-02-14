@@ -40,7 +40,6 @@ async function runSwarmAttack(deps = {}) {
         try {
             browser = await p.launch({
                 headless: false, // Visible for debugging/human-like behavior
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             
             const page = await browser.newPage();
