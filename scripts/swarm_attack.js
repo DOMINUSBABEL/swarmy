@@ -37,7 +37,6 @@ async function runSwarmAttack() {
         try {
             const browser = await puppeteer.launch({
                 headless: false, // Visible for debugging/human-like behavior
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             
             const page = await browser.newPage();

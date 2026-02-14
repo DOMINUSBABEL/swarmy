@@ -64,7 +64,6 @@ async function processJob(job) {
     try {
         browser = await puppeteer.launch({
             headless: false, // Visible for now
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
         
