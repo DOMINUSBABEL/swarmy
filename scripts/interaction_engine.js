@@ -49,9 +49,15 @@ async function runInteractionPod() {
 
     const interactions = [];
 
+    // Create Map for O(1) lookup
+    const accountMap = new Map();
+    for (const a of accounts) {
+        accountMap.set(a.account_id, a);
+    }
+
     for (const post of recentPosts) {
         // Find who posted it
-        const author = accounts.find(a => a.account_id === post.account_id);
+        const author = accountMap.get(post.account_id);
         if (!author) continue;
 
         // Everyone else reacts
