@@ -3,7 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 
 // Configuration
-const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
+const DEFAULT_EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 
 // MOCK LLM CALL (Replace with real Gemini/GPT call later)
 async function generatePostText(persona, topic) {
@@ -25,13 +25,15 @@ async function generatePostText(persona, topic) {
     return text;
 }
 
-async function runContentEngine() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+async function runContentEngine(customExcelPath) {
+    const excelPath = customExcelPath || DEFAULT_EXCEL_PATH;
+
+    if (!fs.existsSync(excelPath)) {
         console.error("❌ Excel not found.");
         return;
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsx.readFile(excelPath);
     
     // Read Accounts & Identities
     const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
@@ -48,12 +50,18 @@ async function runContentEngine() {
         
         const newPostText = await generatePostText({ type: acc.persona_type }, topic);
         
+        // Determine status based on auto_approve flag
+        // Accepts boolean true or string "true"/"yes" (case insensitive)
+        const isAutoApprove = acc.auto_approve === true ||
+                              (typeof acc.auto_approve === 'string' && ['true', 'yes'].includes(acc.auto_approve.toLowerCase()));
+        const status = isAutoApprove ? 'approved' : 'draft';
+
         const newPost = {
             post_id: `gen_${Date.now()}_${Math.floor(Math.random()*1000)}`,
             account_id: acc.account_id,
             line_id: 'auto_gen',
             scheduled_date: '2026-02-15 12:00', // Placeholder
-            status: 'draft', // Human review needed? Or auto-approve for swarm?
+            status: status,
             content_text: newPostText,
             media_path: '',
             hashtags: `#${topic.replace(' ', '')}`
@@ -65,9 +73,13 @@ async function runContentEngine() {
     // Write back
     const newSheet = xlsx.utils.json_to_sheet(calendar);
     workbook.Sheets['CALENDAR'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    xlsx.writeFile(workbook, excelPath);
 
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
 
-runContentEngine();
+if (require.main === module) {
+    runContentEngine();
+}
+
+module.exports = { runContentEngine };
