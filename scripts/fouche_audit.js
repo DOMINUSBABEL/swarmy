@@ -8,13 +8,6 @@ const xlsx = require('xlsx');
 const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 const LOG_PATH = path.join(__dirname, '../logs/fouche_audit.log');
 
-// Fouché's Rules of Efficiency
-const RULES = {
-    MAX_IDLE_TIME_HOURS: 4,
-    MIN_ENGAGEMENT_RATE: 0.02,
-    FORBIDDEN_KEYWORDS: ['I am an AI', 'chatbot', 'generic response']
-};
-
 function auditSwarm() {
     if (!fs.existsSync(EXCEL_PATH)) return;
 
