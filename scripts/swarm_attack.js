@@ -15,17 +15,34 @@ const COMMENTS = {
     'acc_revistavoces': "📢 [AHORA] El Concejal Luis Guillermo Vélez marca la pauta sobre el debate de ciudad. Hilo recomendado 👇"
 };
 
-async function runSwarmAttack() {
+async function runSwarmAttack(injectedAccounts, injectedPuppeteer) {
     console.log(`🐝 SWARM ATTACK INITIATED against: ${TARGET_URL}`);
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    
-    // Filter only our 5 REAL soldiers
-    const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
+    let squad;
+    if (injectedAccounts) {
+        squad = injectedAccounts;
+    } else {
+        const workbook = xlsx.readFile(EXCEL_PATH);
+        const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+        // Filter only our 5 REAL soldiers
+        squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
+    }
 
     if (squad.length === 0) {
         console.error("❌ No active soldiers found.");
+        return;
+    }
+
+    const pptr = injectedPuppeteer || puppeteer;
+
+    let browser;
+    try {
+        browser = await pptr.launch({
+            headless: false, // Visible for debugging/human-like behavior
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+    } catch (e) {
+        console.error(`❌ Failed to launch browser: ${e.message}`);
         return;
     }
 
@@ -33,13 +50,12 @@ async function runSwarmAttack() {
     for (const soldier of squad) {
         console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
         
+        let context;
         try {
-            const browser = await puppeteer.launch({
-                headless: false, // Visible for debugging/human-like behavior
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            // Use browser context instead of new browser instance
+            context = await browser.createBrowserContext();
             
-            const page = await browser.newPage();
+            const page = await context.newPage();
             await page.setViewport({ width: 1280, height: 800 });
 
             // 1. LOGIN
@@ -106,12 +122,28 @@ async function runSwarmAttack() {
             }
 
             await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            await browser.close();
 
         } catch (e) {
             console.error(`   ❌ FAILED: ${e.message}`);
+        } finally {
+            if (context) {
+                try {
+                    await context.close();
+                } catch (closeError) {
+                    console.error(`   ⚠️ Failed to close context: ${closeError.message}`);
+                }
+            }
         }
+    }
+
+    if (browser) {
+        await browser.close();
     }
 }
 
-runSwarmAttack();
+// Only run if called directly
+if (require.main === module) {
+    runSwarmAttack();
+}
+
+module.exports = { runSwarmAttack };
