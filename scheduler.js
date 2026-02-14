@@ -53,26 +53,67 @@ function loadPendingJobs() {
     return { workbook, pendingJobs };
 }
 
-// --- CORE: Worker ---
-async function processJob(job) {
-    const { post_id, account, platform, content_text } = job;
-    log('INFO', `Starting Job: ${post_id} for ${account.account_id} (${account.platform})`);
+// --- CORE: Worker (REAL PUPPETEER) ---
+const puppeteer = require('puppeteer');
 
+async function processJob(job) {
+    const { post_id, account, content_text } = job;
+    log('INFO', `Starting Job: ${post_id} for ${account.username}`);
+
+    let browser;
     try {
-        // DYNAMIC IMPORT based on platform
-        // In real version: require(`./platforms/${account.platform}`).post(account, content_text);
+        browser = await puppeteer.launch({
+            headless: false, // Visible for now
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
         
-        // Simulation for MVP
-        await sleep(3000); // Simulate browser opening
+        // 1. LOGIN (Simplified for X)
+        await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
         
-        if (Math.random() > 0.8) throw new Error("Random Network Error (Simulated)");
+        // Username
+        await page.waitForSelector('input[autocomplete="username"]');
+        await page.type('input[autocomplete="username"]', account.username);
+        await page.keyboard.press('Enter');
         
-        log('SUCCESS', `Posted: ${post_id} on ${account.username}`);
+        // Wait for potential "Verify" or Password
+        await new Promise(r => setTimeout(r, 2000));
+        
+        // Check if asking for password directly or phone/email first
+        // Simple logic: Look for password field. If not there, look for text input (challenge)
+        try {
+            await page.waitForSelector('input[name="password"]', { timeout: 3000 });
+        } catch(e) {
+            // Challenge? Assume it might be email/phone if configured, or just retry password
+            // For now, assume straight to password or fail
+            log('WARN', 'Password field not found immediately. Possible challenge.');
+        }
+
+        await page.type('input[name="password"]', account.password);
+        await page.keyboard.press('Enter');
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+        // 2. POST
+        await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
+        await new Promise(r => setTimeout(r, 2000));
+        
+        await page.keyboard.type(content_text);
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Click Tweet button
+        await page.click('div[data-testid="tweetButton"]');
+        await new Promise(r => setTimeout(r, 5000)); // Wait for send
+
+        log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
         return { success: true };
 
     } catch (error) {
         log('ERROR', `Failed Job ${post_id}: ${error.message}`);
+        // Take screenshot on failure
+        if (browser) await browser.pages().then(p => p[0].screenshot({ path: `logs/fail_${post_id}.png` }));
         return { success: false, error: error.message };
+    } finally {
+        if (browser) await browser.close();
     }
 }
 
