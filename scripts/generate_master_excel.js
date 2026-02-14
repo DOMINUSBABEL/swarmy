@@ -7,6 +7,9 @@ const OUT_FILE = 'Master_Social_Creds.xlsx';
 function generateMasterExcel() {
     // FORCE OVERWRITE FOR CREDENTIAL INJECTION
     // if (fs.existsSync(OUT_FILE)) { console.log(`⚠️ ${OUT_FILE} already exists. Skipping.`); return; }
+    if (fs.existsSync(OUT_FILE)) {
+        try { fs.unlinkSync(OUT_FILE); } catch(e) { console.log("Old file locked/error"); }
+    }
 
     const workbook = xlsx.utils.book_new();
 
@@ -66,10 +69,32 @@ function generateMasterExcel() {
             status: 'active',
             persona_type: 'news_outlet', // Nuevo Rol: Medio
             content_lines: 'news, headlines'
-        }
+        },
+        {
+            account_id: 'acc_camila',
+            platform: 'twitter',
+            username: 'moreno_cam73152',
+            password: 'Habiaunavex205@',
+            status: 'active',
+            persona_type: 'general',
+            content_lines: 'lifestyle'
+        },
+        {
+            account_id: 'acc_concejo_x',
+            platform: 'twitter',
+            username: 'concejo38265',
+            password: 'febrero202631',
+            status: 'active',
+            persona_type: 'policy_analyst',
+            content_lines: 'politics'
+        },
+        // PENDING PASSWORDS
+        { account_id: 'acc_valentina', username: 'ValentinaM98520', password: '', status: 'inactive' },
+        { account_id: 'acc_andres', username: 'HerreraTor4892', password: '', status: 'inactive' },
+        { account_id: 'acc_mafe', username: 'FernandaMa42026', password: '', status: 'inactive' }
     ];
 
-    // Add placeholder slots for remaining 5 to reach 10
+    // Add placeholder slots for remaining 0 to reach 10
     for (let i = 5; i <= 10; i++) {
         accountsData.push({
             account_id: `account_${String(i).padStart(2, '0')}`,

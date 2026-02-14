@@ -93,15 +93,32 @@ async function processJob(job) {
         await page.keyboard.press('Enter');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
-        // 2. POST
-        await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
-        await new Promise(r => setTimeout(r, 2000));
-        
-        await page.keyboard.type(content_text);
-        await new Promise(r => setTimeout(r, 1000));
-        
-        // Click Tweet button
-        await page.click('div[data-testid="tweetButton"]');
+        // 2. ACTION LOGIC
+        if (job.target_url) {
+            // REPLY / QUOTE Mode
+            console.log(`   ↳ Target: ${job.target_url}`);
+            await page.goto(job.target_url, { waitUntil: 'networkidle2' });
+            await new Promise(r => setTimeout(r, 2000));
+
+            // Click Reply (Simplest integration)
+            // Selector for Reply icon often in [data-testid="reply"]
+            await page.click('div[data-testid="reply"]');
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await page.keyboard.type(content_text);
+            await new Promise(r => setTimeout(r, 500));
+            
+            await page.click('div[data-testid="tweetButton"]');
+        } else {
+            // NEW POST Mode
+            await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
+            await new Promise(r => setTimeout(r, 2000));
+            
+            await page.keyboard.type(content_text);
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await page.click('div[data-testid="tweetButton"]');
+        }
         await new Promise(r => setTimeout(r, 5000)); // Wait for send
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
