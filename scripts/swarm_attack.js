@@ -16,12 +16,100 @@ const COMMENTS = {
     'acc_revistavoces': "📢 [AHORA] El Concejal Luis Guillermo Vélez marca la pauta sobre el debate de ciudad. Hilo recomendado 👇"
 };
 
+async function processSoldier(soldier) {
+    const logPrefix = `[${soldier.username}]`;
+    console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
+    
+    try {
+        const browser = await puppeteer.launch({
+            headless: false, // Visible for debugging/human-like behavior
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+
+        // 1. LOGIN
+        console.log(`   ${logPrefix} 🔑 Logging in...`);
+        await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
+
+        // Wait for username input
+        const userInputSelector = 'input[autocomplete="username"]';
+        await page.waitForSelector(userInputSelector);
+        await page.type(userInputSelector, soldier.username);
+        await new Promise(r => setTimeout(r, 500));
+
+        // Click NEXT button (Crucial Step)
+        // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
+        // X often uses a 'span' inside a div with role='button'.
+        // Let's use Puppeteer's text selector or reliable xpath
+        const nextButton = await page.waitForSelector('xpath/.//span[contains(text(), "Siguiente") or contains(text(), "Next")]');
+        if (nextButton) {
+            await nextButton.click();
+        } else {
+            // Fallback: Press Enter
+            await page.keyboard.press('Enter');
+        }
+
+        await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+
+        // Wait for password input
+        await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
+        await page.type('input[name="password"]', soldier.password);
+        await page.keyboard.press('Enter');
+        
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+        console.log(`   ${logPrefix} ✅ Login successful.`);
+
+        // 2. NAVIGATE TO TARGET
+        console.log(`   ${logPrefix} 🎯 Navigating to target...`);
+        await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
+        await new Promise(r => setTimeout(r, 3000)); // Human pause
+
+        // 3. ACTION (Reply/Like)
+        // Like
+        const likeSelector = 'div[data-testid="like"]';
+        if (await page.$(likeSelector)) {
+            await page.click(likeSelector);
+            console.log(`   ${logPrefix} ❤️ Liked.`);
+        }
+
+        // Reply
+        const comment = COMMENTS[soldier.account_id];
+        if (comment) {
+            console.log(`   ${logPrefix} 💬 Replying: "${comment}"`);
+            
+            // Click reply box (this selector is tricky and changes often, generic approach)
+            // Focusing on the contenteditable div usually works
+            await page.click('div[data-testid="reply"]'); // Open modal or focus
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await page.keyboard.type(comment);
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Click Reply button
+            await page.click('div[data-testid="tweetButton"]');
+            console.log(`   ${logPrefix} 🚀 Reply sent.`);
+        }
+
+        await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
+        await browser.close();
+
+    } catch (e) {
+        console.error(`   ${logPrefix} ❌ FAILED: ${e.message}`);
+    }
+}
+
 async function runSwarmAttack() {
     console.log(`🐝 SWARM ATTACK INITIATED against: ${TARGET_URL}`);
 
+    // Dynamic import for p-limit
+    const { default: pLimit } = await import('p-limit');
+    const limit = pLimit(3); // Concurrency limit of 3
+
     const workbook = xlsx.readFile(EXCEL_PATH);
     const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    
+
     // Filter only our 5 REAL soldiers
     const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
 
@@ -30,89 +118,16 @@ async function runSwarmAttack() {
         return;
     }
 
-    // Process sequentially to avoid RAM explosion
-    for (const soldier of squad) {
-        console.log(`\n🪖 DEPLOYING: ${soldier.username} (${soldier.account_id})`);
-        
-        try {
-            const browser = await puppeteer.launch({
-                headless: false, // Visible for debugging/human-like behavior
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-            
-            const page = await browser.newPage();
-            await page.setViewport({ width: 1280, height: 800 });
+    // Process in parallel with limit
+    console.log(`Processing ${squad.length} soldiers with concurrency limit of 3...`);
 
-            // 1. LOGIN
-            console.log("   🔑 Logging in...");
-            await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
-            
-            // Wait for username input
-            const userInputSelector = 'input[autocomplete="username"]';
-            await page.waitForSelector(userInputSelector);
-            await page.type(userInputSelector, soldier.username);
-            await new Promise(r => setTimeout(r, 500)); 
-            
-            // Click NEXT button (Crucial Step)
-            // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
-            // X often uses a 'span' inside a div with role='button'.
-            // Let's use Puppeteer's text selector or reliable xpath
-            const nextButton = await page.waitForSelector('xpath/.//span[contains(text(), "Siguiente") or contains(text(), "Next")]');
-            if (nextButton) {
-                await nextButton.click();
-            } else {
-                // Fallback: Press Enter
-                await page.keyboard.press('Enter');
-            }
-            
-            await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+    await Promise.all(squad.map(soldier => limit(() => processSoldier(soldier))));
 
-            // Wait for password input
-            await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
-            await page.type('input[name="password"]', soldier.password);
-            await page.keyboard.press('Enter');
-            
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
-            console.log("   ✅ Login successful.");
-
-            // 2. NAVIGATE TO TARGET
-            console.log("   🎯 Navigating to target...");
-            await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 3000)); // Human pause
-
-            // 3. ACTION (Reply/Like)
-            // Like
-            const likeSelector = 'div[data-testid="like"]';
-            if (await page.$(likeSelector)) {
-                await page.click(likeSelector);
-                console.log("   ❤️ Liked.");
-            }
-
-            // Reply
-            const comment = COMMENTS[soldier.account_id];
-            if (comment) {
-                console.log(`   💬 Replying: "${comment}"`);
-                
-                // Click reply box (this selector is tricky and changes often, generic approach)
-                // Focusing on the contenteditable div usually works
-                await page.click('div[data-testid="reply"]'); // Open modal or focus
-                await new Promise(r => setTimeout(r, 1000));
-                
-                await page.keyboard.type(comment);
-                await new Promise(r => setTimeout(r, 500));
-                
-                // Click Reply button
-                await page.click('div[data-testid="tweetButton"]');
-                console.log("   🚀 Reply sent.");
-            }
-
-            await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            await browser.close();
-
-        } catch (e) {
-            console.error(`   ❌ FAILED: ${e.message}`);
-        }
-    }
+    console.log("🏁 Swarm attack completed.");
 }
 
-runSwarmAttack();
+if (require.main === module) {
+    runSwarmAttack();
+}
+
+module.exports = { runSwarmAttack, processSoldier };
