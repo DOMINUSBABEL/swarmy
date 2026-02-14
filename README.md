@@ -38,13 +38,14 @@ Para evitar bloqueos de IP y colapso de hardware:
 ### Fase 1: Inicialización
 1.  Clonar el repositorio.
 2.  Instalar dependencias: `npm install`
-3.  Generar la matriz de control: `npm run init` (Crea el Excel base).
+3.  Generar la matriz de control: `npm run init` (Crea el Excel base con credenciales placeholder).
 
 ### Fase 2: Configuración del Enjambre
-Abra `Master_Social_Creds.xlsx` y configure sus activos:
-- **Username/Password:** Credenciales de acceso.
+Abra `Master_Social_Creds.xlsx` y configure sus activos (IMPORTANTE: El archivo generado tiene contraseñas falsas por seguridad):
+- **Username/Password:** Reemplace `YOUR_PASSWORD_HERE` con las credenciales reales.
 - **Proxy:** OBLIGATORIO para >5 cuentas (`http://user:pass@ip:port`).
 - **Status:** Marque como `active` las cuentas listas para despliegue.
+*Nota: `Master_Social_Creds.xlsx` está ignorado por git para proteger sus credenciales.*
 
 ### Fase 3: Despliegue
 Ejecute el orquestador:

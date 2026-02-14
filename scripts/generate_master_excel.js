@@ -13,13 +13,13 @@ function generateMasterExcel() {
 
     const workbook = xlsx.utils.book_new();
 
-    // 1. ACCOUNTS Sheet - Injected Real Credentials
+    // 1. ACCOUNTS Sheet - Placeholder Credentials (SECURITY FIX)
     const accountsData = [
         {
             account_id: 'acc_samuel',
             platform: 'twitter',
             username: 'Samuel_MendozCD',
-            password: 'febrero202627',
+            password: 'YOUR_PASSWORD_HERE',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -30,7 +30,7 @@ function generateMasterExcel() {
             account_id: 'acc_mariate',
             platform: 'twitter',
             username: 'mariatemonto',
-            password: 'febrero202628',
+            password: 'YOUR_PASSWORD_HERE',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -41,7 +41,7 @@ function generateMasterExcel() {
             account_id: 'acc_daniel',
             platform: 'twitter',
             username: 'Daniel_VargasCc',
-            password: 'Habiaunavez205@',
+            password: 'YOUR_PASSWORD_HERE',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -52,7 +52,7 @@ function generateMasterExcel() {
             account_id: 'acc_nguerrero',
             platform: 'twitter',
             username: 'NGuerrero16814',
-            password: 'Habiaunavez205@',
+            password: 'YOUR_PASSWORD_HERE',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -63,7 +63,7 @@ function generateMasterExcel() {
             account_id: 'acc_revistavoces',
             platform: 'twitter',
             username: 'RevistavocesD',
-            password: 'Febrero202630',
+            password: 'YOUR_PASSWORD_HERE',
             auth_token: '',
             proxy: '',
             status: 'active',
@@ -74,7 +74,7 @@ function generateMasterExcel() {
             account_id: 'acc_camila',
             platform: 'twitter',
             username: 'moreno_cam73152',
-            password: 'Habiaunavex205@',
+            password: 'YOUR_PASSWORD_HERE',
             status: 'active',
             persona_type: 'general',
             content_lines: 'lifestyle'
@@ -83,7 +83,7 @@ function generateMasterExcel() {
             account_id: 'acc_concejo_x',
             platform: 'twitter',
             username: 'concejo38265',
-            password: 'febrero202631',
+            password: 'YOUR_PASSWORD_HERE',
             status: 'active',
             persona_type: 'policy_analyst',
             content_lines: 'politics'
@@ -126,7 +126,8 @@ function generateMasterExcel() {
     xlsx.utils.book_append_sheet(workbook, calendarSheet, 'CALENDAR');
 
     xlsx.writeFile(workbook, OUT_FILE);
-    console.log(`✅ Injected 4 Real Accounts into ${OUT_FILE}`);
+    console.log(`✅ Generated ${OUT_FILE} with PLACEHOLDER credentials.`);
+    console.log(`⚠️  IMPORTANT: Please open ${OUT_FILE} and update the passwords with real credentials before running the bot.`);
 }
 
 generateMasterExcel();
