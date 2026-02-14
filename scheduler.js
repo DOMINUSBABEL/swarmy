@@ -76,9 +76,6 @@ async function processJob(job) {
         await page.type('input[autocomplete="username"]', account.username);
         await page.keyboard.press('Enter');
         
-        // Wait for potential "Verify" or Password
-        await new Promise(r => setTimeout(r, 2000));
-        
         // Check if asking for password directly or phone/email first
         // Simple logic: Look for password field. If not there, look for text input (challenge)
         try {
@@ -98,28 +95,31 @@ async function processJob(job) {
             // REPLY / QUOTE Mode
             console.log(`   ↳ Target: ${job.target_url}`);
             await page.goto(job.target_url, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 2000));
 
             // Click Reply (Simplest integration)
             // Selector for Reply icon often in [data-testid="reply"]
+            await page.waitForSelector('div[data-testid="reply"]');
             await page.click('div[data-testid="reply"]');
-            await new Promise(r => setTimeout(r, 1000));
             
+            await page.waitForSelector('div[data-testid="tweetTextarea_0"]', { timeout: 5000 }).catch(() => {});
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 500));
+            await sleep(500); // Small pause for typing to register
             
             await page.click('div[data-testid="tweetButton"]');
         } else {
             // NEW POST Mode
             await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
-            await new Promise(r => setTimeout(r, 2000));
             
+            await page.waitForSelector('div[data-testid="tweetTextarea_0"]', { timeout: 5000 }).catch(() => {});
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 1000));
+            await sleep(500); // Small pause for typing to register
             
             await page.click('div[data-testid="tweetButton"]');
         }
-        await new Promise(r => setTimeout(r, 5000)); // Wait for send
+
+        // Wait for send confirmation (simplified)
+        // In real impl, check for success toast or network request
+        await sleep(3000);
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
         return { success: true };
@@ -201,6 +201,14 @@ async function runScheduler() {
 }
 
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
+
+module.exports = {
+    runScheduler,
+    loadPendingJobs,
+    sleep
+};
