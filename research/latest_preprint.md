@@ -25,8 +25,8 @@ The swarm demonstrates emergent behavior...
 
 
 ## 5. Live System Status (Auto-Update)
-- **Active Agents:** 10
-- **Posts Generated:** 45
-- **Engagement Rate:** 4.5%
+- **Active Agents:** 0
+- **Posts Generated:** 0
+- **Engagement Rate:** 0.0%
 
-*Last Updated: 2026-02-14T16:13:35.725Z*
+*Last Updated: 2026-02-14T17:43:04.350Z*
