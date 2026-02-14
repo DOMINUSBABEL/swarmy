@@ -5,14 +5,15 @@
   "main": "scheduler.js",
   "scripts": {
     "start": "node scheduler.js",
+    "test": "node --test tests/*.test.js",
     "init": "node scripts/generate_master_excel.js",
     "post:twitter": "node scripts/post_twitter.js",
     "post:instagram": "node scripts/post_instagram.js"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
+    "dotenv": "^16.4.5",
+    "luxon": "^3.7.2",
     "puppeteer": "^24.2.1",
-    "luxon": "^3.4.4",
-    "dotenv": "^16.4.5"
+    "xlsx": "^0.18.5"
   }
 }
