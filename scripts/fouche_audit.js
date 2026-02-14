@@ -15,27 +15,42 @@ const RULES = {
     FORBIDDEN_KEYWORDS: ['I am an AI', 'chatbot', 'generic response']
 };
 
-function auditSwarm() {
-    if (!fs.existsSync(EXCEL_PATH)) return;
+function auditSwarm(inAccounts, inCalendar) {
+    let accounts = inAccounts;
+    let calendar = inCalendar;
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    const calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+    if (!accounts || !calendar) {
+        if (!fs.existsSync(EXCEL_PATH)) return;
+
+        const workbook = xlsx.readFile(EXCEL_PATH);
+        if (!accounts) accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+        if (!calendar) calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+    }
 
     console.log("🕵️ FOUCHÉ: Auditing Swarm Operations...");
     
     let auditReport = [];
 
-    // 1. Check for Compromised Agents (Inactive or Failed)
-    const failedPosts = calendar.filter(p => p.status === 'failed');
-    if (failedPosts.length > 0) {
-        auditReport.push(`⚠️ ALERT: ${failedPosts.length} posts failed. Investigating proxies.`);
+    // 1. Check for Compromised Agents (Inactive or Failed) & Quality Control
+    // Optimized: Single pass iteration
+    let failedCount = 0;
+    let weakCount = 0;
+
+    for (const p of calendar) {
+        if (p.status === 'failed') {
+            failedCount++;
+        }
+        if (p.content_text && p.content_text.length < 20) {
+            weakCount++;
+        }
     }
 
-    // 2. Check for Quality Control (Quality Assurance)
-    const weakPosts = calendar.filter(p => p.content_text && p.content_text.length < 20);
-    if (weakPosts.length > 0) {
-        auditReport.push(`📉 QUALITY: ${weakPosts.length} posts are too short (Low Effort). Talleyrand, improve prompts.`);
+    if (failedCount > 0) {
+        auditReport.push(`⚠️ ALERT: ${failedCount} posts failed. Investigating proxies.`);
+    }
+
+    if (weakCount > 0) {
+        auditReport.push(`📉 QUALITY: ${weakCount} posts are too short (Low Effort). Talleyrand, improve prompts.`);
     }
 
     // 3. Optimization Suggestion
@@ -57,6 +72,12 @@ function auditSwarm() {
     } else {
         console.log("✅ FOUCHÉ: The State is secure. Operations are optimal.");
     }
+
+    return auditReport;
 }
 
-auditSwarm();
+if (require.main === module) {
+    auditSwarm();
+}
+
+module.exports = { auditSwarm };
