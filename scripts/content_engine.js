@@ -25,6 +25,27 @@ async function generatePostText(persona, topic) {
     return text;
 }
 
+async function generatePostsForAccounts(activeAccounts, generator = generatePostText) {
+    const promises = activeAccounts.map(async (acc) => {
+        // Generate 1 new draft post per account
+        const topic = acc.core_topics ? acc.core_topics.split(',')[0] : 'Life'; // Simple topic picker
+
+        const newPostText = await generator({ type: acc.persona_type }, topic);
+
+        return {
+            post_id: `gen_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+            account_id: acc.account_id,
+            line_id: 'auto_gen',
+            scheduled_date: '2026-02-15 12:00', // Placeholder
+            status: 'draft', // Human review needed? Or auto-approve for swarm?
+            content_text: newPostText,
+            media_path: '',
+            hashtags: `#${topic.replace(' ', '')}`
+        };
+    });
+    return Promise.all(promises);
+}
+
 async function runContentEngine() {
     if (!fs.existsSync(EXCEL_PATH)) {
         console.error("❌ Excel not found.");
@@ -42,25 +63,8 @@ async function runContentEngine() {
 
     console.log(`🧠 Generating organic content for ${activeAccounts.length} active accounts...`);
 
-    for (const acc of activeAccounts) {
-        // Generate 1 new draft post per account
-        const topic = acc.core_topics ? acc.core_topics.split(',')[0] : 'Life'; // Simple topic picker
-        
-        const newPostText = await generatePostText({ type: acc.persona_type }, topic);
-        
-        const newPost = {
-            post_id: `gen_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-            account_id: acc.account_id,
-            line_id: 'auto_gen',
-            scheduled_date: '2026-02-15 12:00', // Placeholder
-            status: 'draft', // Human review needed? Or auto-approve for swarm?
-            content_text: newPostText,
-            media_path: '',
-            hashtags: `#${topic.replace(' ', '')}`
-        };
-
-        calendar.push(newPost);
-    }
+    const newPosts = await generatePostsForAccounts(activeAccounts);
+    calendar.push(...newPosts);
 
     // Write back
     const newSheet = xlsx.utils.json_to_sheet(calendar);
@@ -70,4 +74,12 @@ async function runContentEngine() {
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
 
-runContentEngine();
+if (require.main === module) {
+    runContentEngine();
+}
+
+module.exports = {
+    runContentEngine,
+    generatePostsForAccounts,
+    generatePostText
+};
