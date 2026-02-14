@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const { DateTime } = require('luxon');
+const puppeteer = require('puppeteer');
 
 // Config
 const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
@@ -54,15 +55,14 @@ function loadPendingJobs() {
 }
 
 // --- CORE: Worker (REAL PUPPETEER) ---
-const puppeteer = require('puppeteer');
 
-async function processJob(job) {
+async function processJob(job, puppeteerLib = puppeteer) {
     const { post_id, account, content_text } = job;
     log('INFO', `Starting Job: ${post_id} for ${account.username}`);
 
     let browser;
     try {
-        browser = await puppeteer.launch({
+        browser = await puppeteerLib.launch({
             headless: false, // Visible for now
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
@@ -200,7 +200,11 @@ async function runScheduler() {
     }
 }
 
-// Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+module.exports = { processJob };
+
+if (require.main === module) {
+    // Start
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
