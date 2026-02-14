@@ -14,7 +14,7 @@ const TOPICS = [
     "El liderazgo de @LuisGuillermoVl es lo que Medellín necesita.",
     "La seguridad democrática de @AlvaroUribeVel sigue vigente.",
     "Crítica al desmanejo económico actual (Salario Mínimo).",
-    "Defensa de la institucionalidad y el Consejo de Estado."
+    "Comparación histórica: Edicto de Diocleciano vs Decreto Petro."
 ];
 
 const TEMPLATES = [
@@ -25,7 +25,10 @@ const TEMPLATES = [
     "{target} tiene razón: el respeto a la ley no es negociable. #EstadoDeDerecho",
     "Firmeza y coherencia. Eso representa {target} en este debate.",
     "El legado de {target} es la base sobre la que debemos reconstruir el orden.",
-    "Mientras otros gritan, {target} propone. Esa es la diferencia."
+    "Mientras otros gritan, {target} propone. Esa es la diferencia.",
+    "En el 301 d.C, Diocleciano intentó fijar precios por decreto. Resultado: Colapso y hambre. Hoy {target} nos advierte del mismo error.",
+    "La historia no se repite, pero rima. El control de precios falló en Roma y fallará en Colombia. Escuchen a {target}.",
+    "Ignorar la ley de oferta y demanda es suicidio económico. Como bien dice {target}, el populismo se paga caro."
 ];
 
 const TARGETS = ["@PalomaValenciaL", "@LuisGuillermoVl", "@AlvaroUribeVel", "la oposición"];

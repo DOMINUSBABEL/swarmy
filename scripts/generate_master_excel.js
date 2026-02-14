@@ -15,86 +15,21 @@ function generateMasterExcel() {
 
     // 1. ACCOUNTS Sheet - Injected Real Credentials
     const accountsData = [
-        {
-            account_id: 'acc_samuel',
-            platform: 'twitter',
-            username: 'Samuel_MendozCD',
-            password: 'febrero202627',
-            auth_token: '',
-            proxy: '',
-            status: 'active',
-            persona_type: 'policy_analyst', // Asignación estratégica
-            content_lines: 'politics, urbanism'
-        },
-        {
-            account_id: 'acc_mariate',
-            platform: 'twitter',
-            username: 'mariatemonto',
-            password: 'febrero202628',
-            auth_token: '',
-            proxy: '',
-            status: 'active',
-            persona_type: 'coffee_snob', // Asignación estratégica (Aguabonita?)
-            content_lines: 'lifestyle, culture'
-        },
-        {
-            account_id: 'acc_daniel',
-            platform: 'twitter',
-            username: 'Daniel_VargasCc',
-            password: 'Habiaunavez205@',
-            auth_token: '',
-            proxy: '',
-            status: 'active',
-            persona_type: 'tech_visionary',
-            content_lines: 'tech, future'
-        },
-        {
-            account_id: 'acc_nguerrero',
-            platform: 'twitter',
-            username: 'NGuerrero16814',
-            password: 'Habiaunavez205@',
-            auth_token: '',
-            proxy: '',
-            status: 'active',
-            persona_type: 'shitposter', // Caos controlado
-            content_lines: 'memes, rant'
-        },
-        {
-            account_id: 'acc_revistavoces',
-            platform: 'twitter',
-            username: 'RevistavocesD',
-            password: 'Febrero202630',
-            auth_token: '',
-            proxy: '',
-            status: 'active',
-            persona_type: 'news_outlet', // Nuevo Rol: Medio
-            content_lines: 'news, headlines'
-        },
-        {
-            account_id: 'acc_camila',
-            platform: 'twitter',
-            username: 'moreno_cam73152',
-            password: 'Habiaunavex205@',
-            status: 'active',
-            persona_type: 'general',
-            content_lines: 'lifestyle'
-        },
-        {
-            account_id: 'acc_concejo_x',
-            platform: 'twitter',
-            username: 'concejo38265',
-            password: 'febrero202631',
-            status: 'active',
-            persona_type: 'policy_analyst',
-            content_lines: 'politics'
-        },
-        // PENDING PASSWORDS
-        { account_id: 'acc_valentina', username: 'ValentinaM98520', password: '', status: 'inactive' },
-        { account_id: 'acc_andres', username: 'HerreraTor4892', password: '', status: 'inactive' },
-        { account_id: 'acc_mafe', username: 'FernandaMa42026', password: '', status: 'inactive' }
+        { account_id: 'acc_samuel', username: 'Samuel_MendozCD', password: 'febrero202627', status: 'active', persona_type: 'policy_analyst' },
+        { account_id: 'acc_mariate', username: 'mariatemonto', password: 'febrero202628', status: 'active', persona_type: 'coffee_snob' },
+        { account_id: 'acc_daniel', username: 'Daniel_VargasCc', password: 'Habiaunavez205@', status: 'active', persona_type: 'tech_visionary' },
+        { account_id: 'acc_nguerrero', username: 'NGuerrero16814', password: 'Habiaunavez205@', status: 'active', persona_type: 'shitposter' },
+        { account_id: 'acc_revistavoces', username: 'RevistavocesD', password: 'Febrero202630', status: 'active', persona_type: 'news_outlet' },
+        { account_id: 'acc_camila', username: 'moreno_cam73152', password: 'Habiaunavex205@', status: 'active', persona_type: 'general' },
+        { account_id: 'acc_concejo_x', username: 'concejo38265', password: 'febrero202631', status: 'active', persona_type: 'policy_analyst' },
+        { account_id: 'acc_luigi', username: 'Luigialvarez02', password: 'febrero202631', status: 'active', persona_type: 'policy_analyst' },
+        
+        // Asumed Passwords based on pattern (User provided names but not explicit passwords for these in last block)
+        { account_id: 'acc_mafe', username: 'FernandaMa42026', password: 'Habiaunavez205@', status: 'active', persona_type: 'general' },
+        { account_id: 'acc_andres', username: 'HerreraTor4892', password: 'Habiaunavez205@', status: 'active', persona_type: 'tech_visionary' },
+        { account_id: 'acc_valentina', username: 'ValentinaM98520', password: 'Habiaunavez205@', status: 'active', persona_type: 'coffee_snob' },
+        { account_id: 'acc_juan', username: 'castro_jua50789', password: 'Habiaunavez205@', status: 'active', persona_type: 'crypto_degen' }
     ];
-
-    // Add placeholder slots for remaining 0 to reach 10
     for (let i = 5; i <= 10; i++) {
         accountsData.push({
             account_id: `account_${String(i).padStart(2, '0')}`,

@@ -12,11 +12,13 @@ function injectHybridStrategy() {
     const workbook = xlsx.readFile(EXCEL_PATH);
     const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
     
-    // Filter active accounts
-    const squad = accounts.filter(a => a.status === 'active');
+    // Filter active accounts - 30% SQUAD (Elite Team)
+    const eliteSquadIds = ['acc_samuel', 'acc_mariate', 'acc_revistavoces', 'acc_concejo_x'];
+    const squad = accounts.filter(a => eliteSquadIds.includes(a.account_id));
     
     let calendar = [];
-    let startTime = DateTime.now().plus({ minutes: 2 });
+    // FORCE TIME: 1 minute ago to trigger IMMEDIATELY
+    let startTime = DateTime.now().minus({ minutes: 1 });
 
     // 1. DIRECT SUPPORT (Attack on LGV Post)
     squad.forEach((soldier, index) => {
@@ -47,6 +49,21 @@ function injectHybridStrategy() {
             case 'acc_concejo_x':
                 content = "Importante debate para la ciudad. El control político es vital.";
                 break;
+            case 'acc_luigi':
+                content = "El respeto a las instituciones es la base de la democracia. Bien dicho.";
+                break;
+            case 'acc_mafe':
+                content = "Es hora de pensar en soluciones reales, no en populismo. 👍";
+                break;
+            case 'acc_andres':
+                content = "Datos matan relato. La economía no miente.";
+                break;
+            case 'acc_valentina':
+                content = "Totalmente. La incertidumbre es lo peor para el emprendimiento.";
+                break;
+            case 'acc_juan':
+                content = "Esto afecta todo el ecosistema económico. Ojo ahí.";
+                break;
         }
 
         calendar.push({
@@ -73,6 +90,11 @@ function injectHybridStrategy() {
             case 'acc_daniel': topic = "Analizando el impacto en PYMES del nuevo decreto: Es insostenible sin subsidios cruzados."; break;
             case 'acc_nguerrero': topic = "El gobierno cree que somos tontos. Nos meten la mano al bolsillo y dicen que es 'justicia social'."; break;
             case 'acc_revistavoces': topic = "URGENTE: Reacciones encontradas tras la suspensión del decreto de salario mínimo. ¿Crisis institucional?"; break;
+            case 'acc_luigi': topic = "¿Qué sigue para Medellín tras esta decisión? Hilo de análisis."; break;
+            case 'acc_mafe': topic = "La canasta familiar no aguanta más improvisación."; break;
+            case 'acc_andres': topic = "Comparativa: Inflación vs Salario Mínimo en los últimos 10 años."; break;
+            case 'acc_valentina': topic = "Emprendedores en alerta. ¿Cómo nos afecta el nuevo decreto?"; break;
+            case 'acc_juan': topic = "El mercado reacciona. Dólar y tasas de interés al alza."; break;
         }
 
         if (topic) {

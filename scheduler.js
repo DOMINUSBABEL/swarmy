@@ -68,30 +68,21 @@ async function processJob(job) {
         });
         const page = await browser.newPage();
         
-        // 1. LOGIN (Simplified for X)
-        await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
+        // 1. LOGIN (Super Safe Mode)
+        // Go to Home and let Human do everything
+        await page.goto('https://x.com/', { waitUntil: 'networkidle2' });
         
-        // Username
-        await page.waitForSelector('input[autocomplete="username"]');
-        await page.type('input[autocomplete="username"]', account.username);
-        await page.keyboard.press('Enter');
+        log('SYSTEM', '🛑 WAITING FOR HUMAN LOGIN AT x.com... (Please login manually)');
         
-        // Wait for potential "Verify" or Password
-        await new Promise(r => setTimeout(r, 2000));
-        
-        // Check if asking for password directly or phone/email first
-        // Simple logic: Look for password field. If not there, look for text input (challenge)
+        // Wait until we see the "Post" composer or Home timeline
+        // Selector for "Post" button in sidebar: [data-testid="SideNav_NewTweet_Button"]
         try {
-            await page.waitForSelector('input[name="password"]', { timeout: 3000 });
+            await page.waitForSelector('div[data-testid="SideNav_NewTweet_Button"]', { timeout: 600000 }); // 10 minutes wait
+            log('SYSTEM', '✅ Login detected! Taking control.');
         } catch(e) {
-            // Challenge? Assume it might be email/phone if configured, or just retry password
-            // For now, assume straight to password or fail
-            log('WARN', 'Password field not found immediately. Possible challenge.');
+            log('ERROR', 'Login timeout. Moving to next.');
+            throw new Error('Login Timeout');
         }
-
-        await page.type('input[name="password"]', account.password);
-        await page.keyboard.press('Enter');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
         // 2. ACTION LOGIC
         if (job.target_url) {
@@ -122,6 +113,25 @@ async function processJob(job) {
         await new Promise(r => setTimeout(r, 5000)); // Wait for send
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
+
+        // 3. FOLLOW TRAIN
+        const SQUAD = ['Samuel_MendozCD', 'mariatemonto', 'Daniel_VargasCc', 'NGuerrero16814', 'RevistavocesD', 'moreno_cam73152', 'concejo38265', 'Luigialvarez02'];
+        for (const handle of SQUAD) {
+            if (handle.toLowerCase() === account.username.toLowerCase()) continue;
+            try {
+                await page.goto(`https://twitter.com/${handle}`, { waitUntil: 'networkidle2' });
+                const [followBtn] = await page.$x("//button[contains(@aria-label, 'Follow') or contains(@aria-label, 'Seguir')]");
+                if (followBtn) {
+                    const label = await page.evaluate(el => el.getAttribute('aria-label'), followBtn);
+                    if (!label.includes('Following') && !label.includes('Siguiendo')) {
+                         await followBtn.click();
+                         log('INFO', `Followed: @${handle}`);
+                         await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
+            } catch(e) {}
+        }
+
         return { success: true };
 
     } catch (error) {
@@ -142,16 +152,29 @@ function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
     const rowIndex = data.findIndex(row => row.post_id === postId);
     if (rowIndex === -1) return;
 
-    // Direct cell update (simplest for xlsx lib without keeping strict format, 
-    // real impl might need to read/write carefully to preserve formulas if any)
-    // Here we just update the JSON and rewrite the sheet.
-    
     data[rowIndex].status = newStatus;
-    if (errorMsg) data[rowIndex].error_log = errorMsg; // Add error column if needed
+    if (errorMsg) data[rowIndex].error_log = errorMsg;
 
     const newSheet = xlsx.utils.json_to_sheet(data);
     workbook.Sheets['CALENDAR'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    
+    // RETRY LOGIC FOR EXCEL WRITE
+    let attempts = 0;
+    while (attempts < 5) {
+        try {
+            xlsx.writeFile(workbook, EXCEL_PATH);
+            break; // Success
+        } catch (e) {
+            if (e.code === 'EBUSY') {
+                attempts++;
+                // Synchronous sleep hack for simple retry
+                const start = Date.now();
+                while (Date.now() - start < 1000) {} 
+            } else {
+                throw e; // Other error
+            }
+        }
+    }
 }
 
 // --- ORCHESTRATOR ---
