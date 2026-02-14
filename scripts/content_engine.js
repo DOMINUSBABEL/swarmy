@@ -19,10 +19,14 @@ async function generatePostText(persona, topic) {
     // Identity Injection
     let text = variations[Math.floor(Math.random() * variations.length)];
     
-    if (persona.type === 'shitposter') text = text.toLowerCase().replace('.', '');
+    if (persona.type === 'shitposter') text = text.toLowerCase().replaceAll('.', '');
     if (persona.type === 'policy_analyst') text = `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`;
     
     return text;
+}
+
+function generateHashtags(topic) {
+    return `#${topic.replaceAll(' ', '')}`;
 }
 
 async function runContentEngine() {
@@ -56,7 +60,7 @@ async function runContentEngine() {
             status: 'draft', // Human review needed? Or auto-approve for swarm?
             content_text: newPostText,
             media_path: '',
-            hashtags: `#${topic.replace(' ', '')}`
+            hashtags: generateHashtags(topic)
         };
 
         calendar.push(newPost);
@@ -70,4 +74,8 @@ async function runContentEngine() {
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
 
-runContentEngine();
+if (require.main === module) {
+    runContentEngine();
+}
+
+module.exports = { generatePostText, generateHashtags };
