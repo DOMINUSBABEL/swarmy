@@ -4,7 +4,9 @@ const xlsx = require('xlsx');
 const { DateTime } = require('luxon');
 
 // Config
-const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
+const DEFAULT_EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
+let excelPath = DEFAULT_EXCEL_PATH;
+
 const MAX_CONCURRENT_WORKERS = 3; // Adjust based on RAM (approx 500MB per browser)
 const POLL_INTERVAL_MS = 60 * 1000; // Check every minute
 
@@ -14,18 +16,22 @@ let isRunning = false;
 // Mock Logger
 const log = (type, msg) => console.log(`[${new Date().toISOString()}] [${type}] ${msg}`);
 
+function setExcelPath(path) {
+    excelPath = path;
+}
+
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // --- CORE: Load Data ---
 function loadPendingJobs() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+    if (!fs.existsSync(excelPath)) {
         log('ERROR', 'Excel file not found.');
         return [];
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsx.readFile(excelPath);
     
     // Read Accounts
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
@@ -137,21 +143,68 @@ async function processJob(job) {
 // --- CORE: Update Excel ---
 function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
     const sheet = workbook.Sheets['CALENDAR'];
-    const data = xlsx.utils.sheet_to_json(sheet);
-    
-    const rowIndex = data.findIndex(row => row.post_id === postId);
-    if (rowIndex === -1) return;
+    if (!sheet) return;
 
-    // Direct cell update (simplest for xlsx lib without keeping strict format, 
-    // real impl might need to read/write carefully to preserve formulas if any)
-    // Here we just update the JSON and rewrite the sheet.
-    
-    data[rowIndex].status = newStatus;
-    if (errorMsg) data[rowIndex].error_log = errorMsg; // Add error column if needed
+    // Use header: 1 to get raw array of arrays, preserving structure awareness
+    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+    if (!data || data.length === 0) return;
 
-    const newSheet = xlsx.utils.json_to_sheet(data);
-    workbook.Sheets['CALENDAR'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    const headers = data[0];
+    const postIdColIdx = headers.indexOf('post_id');
+    let statusColIdx = headers.indexOf('status');
+    let errorColIdx = headers.indexOf('error_log');
+
+    if (postIdColIdx === -1) {
+        log('ERROR', 'post_id column not found in CALENDAR sheet.');
+        return;
+    }
+
+    // Find row index (data[0] is header, so data[i] corresponds to Excel row i+1)
+    let targetRowIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+        if (data[i][postIdColIdx] == postId) {
+            targetRowIdx = i;
+            break;
+        }
+    }
+
+    if (targetRowIdx === -1) {
+        log('WARN', `Job ${postId} not found in Excel.`);
+        return;
+    }
+
+    // Helper to update cell directly in sheet object
+    const updateCell = (row, col, value) => {
+        const cellRef = xlsx.utils.encode_cell({ r: row, c: col });
+        sheet[cellRef] = { t: 's', v: value };
+    };
+
+    // Ensure status column exists
+    if (statusColIdx === -1) {
+        statusColIdx = headers.length;
+        headers.push('status');
+        updateCell(0, statusColIdx, 'status'); // Add header
+    }
+    updateCell(targetRowIdx, statusColIdx, newStatus);
+
+    // Handle error log
+    if (errorMsg) {
+        if (errorColIdx === -1) {
+            errorColIdx = headers.length;
+            headers.push('error_log');
+            updateCell(0, errorColIdx, 'error_log'); // Add header
+        }
+        updateCell(targetRowIdx, errorColIdx, errorMsg);
+    }
+
+    // Update sheet range if we added columns
+    const range = xlsx.utils.decode_range(sheet['!ref']);
+    if (headers.length - 1 > range.e.c) {
+        range.e.c = headers.length - 1;
+        sheet['!ref'] = xlsx.utils.encode_range(range);
+    }
+
+    xlsx.writeFile(workbook, excelPath);
 }
 
 // --- ORCHESTRATOR ---
@@ -200,7 +253,17 @@ async function runScheduler() {
     }
 }
 
+module.exports = {
+    setExcelPath,
+    loadPendingJobs,
+    processJob,
+    updateJobStatus,
+    runScheduler
+};
+
 // Start
-log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
-setInterval(runScheduler, POLL_INTERVAL_MS);
-runScheduler(); // Initial run
+if (require.main === module) {
+    log('SYSTEM', 'Social Manager Scheduler v1.0 Started');
+    setInterval(runScheduler, POLL_INTERVAL_MS);
+    runScheduler(); // Initial run
+}
