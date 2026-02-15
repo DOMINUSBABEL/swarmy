@@ -194,25 +194,17 @@ async function runScheduler() {
         log('SYSTEM', `Found ${pendingJobs.length} pending jobs. Processing with concurrency ${MAX_CONCURRENT_WORKERS}...`);
 
         // Queue Processor
-        let activeWorkers = 0;
-        let jobIndex = 0;
-
-        while (jobIndex < pendingJobs.length || activeWorkers > 0) {
-            // Spawn workers if slots available
-            while (activeWorkers < MAX_CONCURRENT_WORKERS && jobIndex < pendingJobs.length) {
-                const job = pendingJobs[jobIndex++];
-                activeWorkers++;
-
-                processJob(job).then(result => {
-                    const status = result.success ? 'published' : 'failed';
-                    updateJobStatus(workbook, job.post_id, status, result.error);
-                    activeWorkers--;
-                });
+        const queue = [...pendingJobs];
+        const workers = Array.from({ length: Math.min(MAX_CONCURRENT_WORKERS, queue.length) }, async () => {
+            while (queue.length > 0) {
+                const job = queue.shift();
+                const result = await processJob(job);
+                const status = result.success ? 'published' : 'failed';
+                updateJobStatus(workbook, job.post_id, status, result.error);
             }
-            
-            // Wait a bit before checking slots again to save CPU
-            await sleep(500);
-        }
+        });
+
+        await Promise.all(workers);
 
     } catch (e) {
         log('CRITICAL', `Scheduler crashed: ${e.message}`);
