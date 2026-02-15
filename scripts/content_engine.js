@@ -19,11 +19,13 @@ async function generatePostText(persona, topic) {
     // Identity Injection
     let text = variations[Math.floor(Math.random() * variations.length)];
     
-    if (persona.type === 'shitposter') text = text.toLowerCase().replace('.', '');
+    if (persona.type === 'shitposter') text = text.toLowerCase().replace(/\./g, '');
     if (persona.type === 'policy_analyst') text = `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`;
     
     return text;
 }
+
+module.exports = { generatePostText };
 
 async function runContentEngine() {
     if (!fs.existsSync(EXCEL_PATH)) {
@@ -70,4 +72,6 @@ async function runContentEngine() {
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
 
-runContentEngine();
+if (require.main === module) {
+    runContentEngine();
+}

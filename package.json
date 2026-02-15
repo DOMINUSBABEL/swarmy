@@ -4,6 +4,7 @@
   "description": "Orquestador de redes sociales automatizado via Excel.",
   "main": "scheduler.js",
   "scripts": {
+    "test": "node --test tests/*.test.js",
     "start": "node scheduler.js",
     "init": "node scripts/generate_master_excel.js",
     "post:twitter": "node scripts/post_twitter.js",
