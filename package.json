@@ -11,7 +11,7 @@
     "post:instagram": "node scripts/post_instagram.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google-cloud/vertexai": "^1.10.0",
     "dotenv": "^16.4.5",
     "luxon": "^3.4.4",
     "puppeteer": "^24.2.1",
