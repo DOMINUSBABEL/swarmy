@@ -15,17 +15,115 @@ const COMMENTS = {
     'acc_revistavoces': "📢 [AHORA] El Concejal Luis Guillermo Vélez marca la pauta sobre el debate de ciudad. Hilo recomendado 👇"
 };
 
+/**
+ * Reads the accounts from the Excel file and filters the specific squad members.
+ * @param {object} x - The xlsx module instance.
+ * @returns {Array} Array of account objects.
+ */
+function getSquad(x) {
+    const workbook = x.readFile(EXCEL_PATH);
+    const accounts = x.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+
+    // Filter only our 5 REAL soldiers
+    return accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
+}
+
+/**
+ * Handles the login process for a single account.
+ * @param {object} page - The Puppeteer page instance.
+ * @param {string} username - The account username.
+ * @param {string} password - The account password.
+ */
+async function login(page, username, password) {
+    console.log("   🔑 Logging in...");
+    await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
+
+    // Wait for username input
+    const userInputSelector = 'input[autocomplete="username"]';
+    await page.waitForSelector(userInputSelector);
+    await page.type(userInputSelector, username);
+    await new Promise(r => setTimeout(r, 500));
+
+    // Click NEXT button (Crucial Step)
+    // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
+    // X often uses a 'span' inside a div with role='button'.
+    // Let's use Puppeteer's text selector or reliable xpath
+    try {
+        const nextButton = await page.waitForSelector('xpath/.//span[contains(text(), "Siguiente") or contains(text(), "Next")]');
+        if (nextButton) {
+            await nextButton.click();
+        } else {
+             // This path is technically unreachable if waitForSelector throws on timeout,
+             // but keeping logic structure for now.
+             await page.keyboard.press('Enter');
+        }
+    } catch (e) {
+         // Fallback if selector fails (though original code would have thrown and skipped login)
+         // To match original behavior strictly, we should rethrow.
+         // But the original code had an 'else' block implying fallback intent.
+         // Let's assume the fallback was desired but broken, and fixing it improves health?
+         // No, strictly preserving behavior means letting it throw if it threw before.
+         throw e;
+    }
+
+    await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+
+    // Wait for password input
+    await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
+    await page.type('input[name="password"]', password);
+    await page.keyboard.press('Enter');
+
+    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    console.log("   ✅ Login successful.");
+}
+
+/**
+ * Navigates to the target URL and performs interactions (Like/Reply).
+ * @param {object} page - The Puppeteer page instance.
+ * @param {string} targetUrl - The URL to attack.
+ * @param {string} comment - The comment to post (optional).
+ */
+async function interact(page, targetUrl, comment) {
+    // 2. NAVIGATE TO TARGET
+    console.log("   🎯 Navigating to target...");
+    await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+    await new Promise(r => setTimeout(r, 3000)); // Human pause
+
+    // 3. ACTION (Reply/Like)
+    // Like
+    const likeSelector = 'div[data-testid="like"]';
+    if (await page.$(likeSelector)) {
+        await page.click(likeSelector);
+        console.log("   ❤️ Liked.");
+    }
+
+    // Reply
+    if (comment) {
+        console.log(`   💬 Replying: "${comment}"`);
+
+        // Click reply box (this selector is tricky and changes often, generic approach)
+        // Focusing on the contenteditable div usually works
+        await page.click('div[data-testid="reply"]'); // Open modal or focus
+        await new Promise(r => setTimeout(r, 1000));
+
+        await page.keyboard.type(comment);
+        await new Promise(r => setTimeout(r, 500));
+
+        // Click Reply button
+        await page.click('div[data-testid="tweetButton"]');
+        console.log("   🚀 Reply sent.");
+    }
+
+    await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
+}
+
 async function runSwarmAttack(deps = {}) {
     const p = deps.puppeteer || puppeteer;
     const x = deps.xlsx || xlsx;
 
     console.log(`🐝 SWARM ATTACK INITIATED against: ${TARGET_URL}`);
 
-    const workbook = x.readFile(EXCEL_PATH);
-    const accounts = x.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    
-    // Filter only our 5 REAL soldiers
-    const squad = accounts.filter(a => ['acc_samuel', 'acc_mariate', 'acc_daniel', 'acc_nguerrero', 'acc_revistavoces'].includes(a.account_id));
+    const squad = getSquad(x);
 
     if (squad.length === 0) {
         console.error("❌ No active soldiers found.");
@@ -45,71 +143,10 @@ async function runSwarmAttack(deps = {}) {
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 800 });
 
-            // 1. LOGIN
-            console.log("   🔑 Logging in...");
-            await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
+            await login(page, soldier.username, soldier.password);
             
-            // Wait for username input
-            const userInputSelector = 'input[autocomplete="username"]';
-            await page.waitForSelector(userInputSelector);
-            await page.type(userInputSelector, soldier.username);
-            await new Promise(r => setTimeout(r, 500)); 
-            
-            // Click NEXT button (Crucial Step)
-            // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
-            // X often uses a 'span' inside a div with role='button'.
-            // Let's use Puppeteer's text selector or reliable xpath
-            const nextButton = await page.waitForSelector('xpath/.//span[contains(text(), "Siguiente") or contains(text(), "Next")]');
-            if (nextButton) {
-                await nextButton.click();
-            } else {
-                // Fallback: Press Enter
-                await page.keyboard.press('Enter');
-            }
-            
-            await new Promise(r => setTimeout(r, 2000)); // Wait for transition
-
-            // Wait for password input
-            await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
-            await page.type('input[name="password"]', soldier.password);
-            await page.keyboard.press('Enter');
-            
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
-            console.log("   ✅ Login successful.");
-
-            // 2. NAVIGATE TO TARGET
-            console.log("   🎯 Navigating to target...");
-            await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 3000)); // Human pause
-
-            // 3. ACTION (Reply/Like)
-            // Like
-            const likeSelector = 'div[data-testid="like"]';
-            if (await page.$(likeSelector)) {
-                await page.click(likeSelector);
-                console.log("   ❤️ Liked.");
-            }
-
-            // Reply
             const comment = COMMENTS[soldier.account_id];
-            if (comment) {
-                console.log(`   💬 Replying: "${comment}"`);
-                
-                // Click reply box (this selector is tricky and changes often, generic approach)
-                // Focusing on the contenteditable div usually works
-                await page.click('div[data-testid="reply"]'); // Open modal or focus
-                await new Promise(r => setTimeout(r, 1000));
-                
-                await page.keyboard.type(comment);
-                await new Promise(r => setTimeout(r, 500));
-                
-                // Click Reply button
-                await page.click('div[data-testid="tweetButton"]');
-                console.log("   🚀 Reply sent.");
-            }
-
-            await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            // Browser will be closed in finally block
+            await interact(page, TARGET_URL, comment);
 
         } catch (e) {
             console.error(`   ❌ FAILED: ${e.message}`);
