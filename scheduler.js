@@ -20,13 +20,14 @@ async function sleep(ms) {
 }
 
 // --- CORE: Load Data ---
-function loadPendingJobs() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+async function loadPendingJobs(excelPath = EXCEL_PATH) {
+    if (!fs.existsSync(excelPath)) {
         log('ERROR', 'Excel file not found.');
-        return [];
+        return { workbook: null, pendingJobs: [] };
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const buffer = await fs.promises.readFile(excelPath);
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
     
     // Read Accounts
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
@@ -183,7 +184,7 @@ async function runScheduler() {
 
     try {
         log('SYSTEM', 'Checking for pending jobs...');
-        const { workbook, pendingJobs } = loadPendingJobs();
+        const { workbook, pendingJobs } = await loadPendingJobs();
 
         if (pendingJobs.length === 0) {
             log('SYSTEM', 'No pending jobs found.');
@@ -214,7 +215,7 @@ async function runScheduler() {
     }
 }
 
-module.exports = { processJob };
+module.exports = { processJob, loadPendingJobs };
 
 if (require.main === module) {
     // Start
