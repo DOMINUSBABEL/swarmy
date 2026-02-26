@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const xlsx = require('xlsx');
+const TWITTER_SELECTORS = require('../twitter_selectors.js');
 
 // CONFIG
 const DEFAULT_TARGET_URL = 'https://x.com/luisguillermovl/status/2022646985677840818';
@@ -79,16 +80,15 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
             
             // Wait for username input
-            const userInputSelector = 'input[autocomplete="username"]';
-            await page.waitForSelector(userInputSelector);
-            await page.type(userInputSelector, soldier.username);
+            await page.waitForSelector(TWITTER_SELECTORS.USERNAME_INPUT);
+            await page.type(TWITTER_SELECTORS.USERNAME_INPUT, soldier.username);
             await new Promise(r => setTimeout(r, 500)); 
             
             // Click NEXT button (Crucial Step)
             // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
             // X often uses a 'span' inside a div with role='button'.
             // Let's use Puppeteer's text selector or reliable xpath
-            const nextButton = await page.waitForSelector('xpath/.//span[contains(text(), "Siguiente") or contains(text(), "Next")]');
+            const nextButton = await page.waitForSelector(TWITTER_SELECTORS.NEXT_BUTTON_XPATH);
             if (nextButton) {
                 await nextButton.click();
             } else {
@@ -99,8 +99,8 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             await new Promise(r => setTimeout(r, 2000)); // Wait for transition
 
             // Wait for password input
-            await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
-            await page.type('input[name="password"]', soldier.password);
+            await page.waitForSelector(TWITTER_SELECTORS.PASSWORD_INPUT, { visible: true, timeout: 5000 });
+            await page.type(TWITTER_SELECTORS.PASSWORD_INPUT, soldier.password);
             await page.keyboard.press('Enter');
             
             await page.waitForNavigation({ waitUntil: 'networkidle2' });
@@ -114,9 +114,8 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
 
             // 3. ACTION (Reply/Like)
             // Like
-            const likeSelector = 'div[data-testid="like"]';
-            if (await page.$(likeSelector)) {
-                await page.click(likeSelector);
+            if (await page.$(TWITTER_SELECTORS.LIKE_BUTTON)) {
+                await page.click(TWITTER_SELECTORS.LIKE_BUTTON);
                 console.log("   ❤️ Liked.");
             }
 
@@ -127,14 +126,14 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
                 
                 // Click reply box (this selector is tricky and changes often, generic approach)
                 // Focusing on the contenteditable div usually works
-                await page.click('div[data-testid="reply"]'); // Open modal or focus
+                await page.click(TWITTER_SELECTORS.REPLY_BUTTON); // Open modal or focus
                 await new Promise(r => setTimeout(r, 1000));
                 
                 await page.keyboard.type(comment);
                 await new Promise(r => setTimeout(r, 500));
                 
                 // Click Reply button
-                await page.click('div[data-testid="tweetButton"]');
+                await page.click(TWITTER_SELECTORS.TWEET_BUTTON);
                 console.log("   🚀 Reply sent.");
             }
 
