@@ -33,15 +33,21 @@ const PERSONAS = {
     }
 };
 
-function assignIdentities() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+function assignIdentities(deps = {}) {
+    const {
+        fsLib = fs,
+        xlsxLib = xlsx,
+        excelPath = EXCEL_PATH
+    } = deps;
+
+    if (!fsLib.existsSync(excelPath)) {
         console.error("❌ Master Excel not found. Run generate_master_excel.js first.");
         return;
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsxLib.readFile(excelPath);
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
-    let accounts = xlsx.utils.sheet_to_json(accountsSheet);
+    let accounts = xlsxLib.utils.sheet_to_json(accountsSheet);
 
     console.log(`🎭 Assigning identities to ${accounts.length} accounts...`);
 
@@ -64,12 +70,16 @@ function assignIdentities() {
     });
 
     // Write back to Excel
-    const newSheet = xlsx.utils.json_to_sheet(updatedAccounts);
+    const newSheet = xlsxLib.utils.json_to_sheet(updatedAccounts);
     workbook.Sheets['ACCOUNTS'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    xlsxLib.writeFile(workbook, excelPath);
     
     console.log("✅ Identities injected successfully into ACCOUNTS sheet.");
     console.table(updatedAccounts.map(a => ({ id: a.account_id, type: a.persona_type, bio: a.bio })));
 }
 
-assignIdentities();
+module.exports = { assignIdentities, PERSONAS };
+
+if (require.main === module) {
+    assignIdentities();
+}
