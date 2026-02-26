@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const xlsx = require('xlsx');
+const { sleep } = require('../utils');
 
 // CONFIG
 const DEFAULT_TARGET_URL = 'https://x.com/luisguillermovl/status/2022646985677840818';
@@ -82,7 +83,7 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             const userInputSelector = 'input[autocomplete="username"]';
             await page.waitForSelector(userInputSelector);
             await page.type(userInputSelector, soldier.username);
-            await new Promise(r => setTimeout(r, 500)); 
+            await sleep(500);
             
             // Click NEXT button (Crucial Step)
             // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
@@ -96,7 +97,7 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
                 await page.keyboard.press('Enter');
             }
             
-            await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+            await sleep(2000); // Wait for transition
 
             // Wait for password input
             await page.waitForSelector('input[name="password"]', { visible: true, timeout: 5000 });
@@ -110,7 +111,7 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             console.log("   🎯 Navigating to target...");
             // Use the validated targetUrl here
             await page.goto(targetUrl, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 3000)); // Human pause
+            await sleep(3000); // Human pause
 
             // 3. ACTION (Reply/Like)
             // Like
@@ -128,17 +129,17 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
                 // Click reply box (this selector is tricky and changes often, generic approach)
                 // Focusing on the contenteditable div usually works
                 await page.click('div[data-testid="reply"]'); // Open modal or focus
-                await new Promise(r => setTimeout(r, 1000));
+                await sleep(1000);
                 
                 await page.keyboard.type(comment);
-                await new Promise(r => setTimeout(r, 500));
+                await sleep(500);
                 
                 // Click Reply button
                 await page.click('div[data-testid="tweetButton"]');
                 console.log("   🚀 Reply sent.");
             }
 
-            await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
+            await sleep(5000); // Wait to ensure send
             // Browser will be closed in finally block
 
         } catch (e) {

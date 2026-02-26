@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const { sleep } = require('../utils');
 
 (async () => {
     console.log("🕵️ Opening Incognito Browser...");
@@ -15,7 +16,7 @@ const puppeteer = require('puppeteer');
     console.log("✅ Ready for Manual Login. Waiting 10 minutes...");
     
     // Keep alive
-    await new Promise(r => setTimeout(r, 600000));
+    await sleep(600000);
     
     await browser.close();
 })();

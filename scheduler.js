@@ -3,6 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const { DateTime } = require('luxon');
 const puppeteer = require('puppeteer');
+const { sleep } = require('./utils');
 
 // Config
 const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
@@ -14,10 +15,6 @@ let isRunning = false;
 
 // Mock Logger
 const log = (type, msg) => console.log(`[${new Date().toISOString()}] [${type}] ${msg}`);
-
-async function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 // --- CORE: Load Data ---
 function loadPendingJobs() {
@@ -88,28 +85,28 @@ async function processJob(job, puppeteerLib = puppeteer) {
             // REPLY / QUOTE Mode
             console.log(`   ↳ Target: ${job.target_url}`);
             await page.goto(job.target_url, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 2000));
+            await sleep(2000);
 
             // Click Reply (Simplest integration)
             // Selector for Reply icon often in [data-testid="reply"]
             await page.click('div[data-testid="reply"]');
-            await new Promise(r => setTimeout(r, 1000));
+            await sleep(1000);
             
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 500));
+            await sleep(500);
             
             await page.click('div[data-testid="tweetButton"]');
         } else {
             // NEW POST Mode
             await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
-            await new Promise(r => setTimeout(r, 2000));
+            await sleep(2000);
             
             await page.keyboard.type(content_text);
-            await new Promise(r => setTimeout(r, 1000));
+            await sleep(1000);
             
             await page.click('div[data-testid="tweetButton"]');
         }
-        await new Promise(r => setTimeout(r, 5000)); // Wait for send
+        await sleep(5000); // Wait for send
 
         log('SUCCESS', `Posted: ${content_text.substring(0, 20)}...`);
 
@@ -125,7 +122,7 @@ async function processJob(job, puppeteerLib = puppeteer) {
                     if (!label.includes('Following') && !label.includes('Siguiendo')) {
                          await followBtn.click();
                          log('INFO', `Followed: @${handle}`);
-                         await new Promise(r => setTimeout(r, 1000));
+                         await sleep(1000);
                     }
                 }
             } catch(e) {}
