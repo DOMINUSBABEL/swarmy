@@ -57,16 +57,14 @@ function loadPendingJobs() {
 
 // --- CORE: Worker (REAL PUPPETEER) ---
 
-async function processJob(job, puppeteerLib = puppeteer) {
+async function processJob(job, browser) {
     const { post_id, account, content_text } = job;
     log('INFO', `Starting Job: ${post_id} for ${account.username}`);
 
-    let browser;
+    let context;
     try {
-        browser = await puppeteerLib.launch({
-            headless: false, // Visible for now
-        });
-        const page = await browser.newPage();
+        context = await browser.createBrowserContext();
+        const page = await context.newPage();
         
         // 1. LOGIN (Super Safe Mode)
         // Go to Home and let Human do everything
@@ -137,10 +135,10 @@ async function processJob(job, puppeteerLib = puppeteer) {
     } catch (error) {
         log('ERROR', `Failed Job ${post_id}: ${error.message}`);
         // Take screenshot on failure
-        if (browser) await browser.pages().then(p => p[0].screenshot({ path: `logs/fail_${post_id}.png` }));
+        if (context) await context.pages().then(p => p[0].screenshot({ path: `logs/fail_${post_id}.png` }));
         return { success: false, error: error.message };
     } finally {
-        if (browser) await browser.close();
+        if (context) await context.close();
     }
 }
 
@@ -182,6 +180,7 @@ async function runScheduler() {
     if (isRunning) return;
     isRunning = true;
 
+    let browser;
     try {
         log('SYSTEM', 'Checking for pending jobs...');
         const { workbook, pendingJobs } = loadPendingJobs();
@@ -194,12 +193,17 @@ async function runScheduler() {
 
         log('SYSTEM', `Found ${pendingJobs.length} pending jobs. Processing with concurrency ${MAX_CONCURRENT_WORKERS}...`);
 
+        // Launch Browser (Single Instance)
+        browser = await puppeteer.launch({
+            headless: false, // Visible for now
+        });
+
         // Queue Processor
         const queue = [...pendingJobs];
         const workers = Array.from({ length: Math.min(MAX_CONCURRENT_WORKERS, queue.length) }, async () => {
             while (queue.length > 0) {
                 const job = queue.shift();
-                const result = await processJob(job);
+                const result = await processJob(job, browser);
                 const status = result.success ? 'published' : 'failed';
                 updateJobStatus(workbook, job.post_id, status, result.error);
             }
@@ -210,6 +214,7 @@ async function runScheduler() {
     } catch (e) {
         log('CRITICAL', `Scheduler crashed: ${e.message}`);
     } finally {
+        if (browser) await browser.close();
         isRunning = false;
         log('SYSTEM', 'Batch finished.');
     }

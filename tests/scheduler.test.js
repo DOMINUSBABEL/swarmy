@@ -10,17 +10,17 @@ test('processJob handles errors gracefully', async () => {
         content_text: 'Hello world'
     };
 
-    // Mock Puppeteer
-    const mockPuppeteer = {
-        launch: async () => {
-            throw new Error('Launch failed');
+    // Mock Browser
+    const mockBrowser = {
+        createBrowserContext: async () => {
+            throw new Error('Context creation failed');
         }
     };
 
     // Run processJob with mock
-    const result = await processJob(job, mockPuppeteer);
+    const result = await processJob(job, mockBrowser);
 
     // Verify result
     assert.strictEqual(result.success, false);
-    assert.strictEqual(result.error, 'Launch failed');
+    assert.strictEqual(result.error, 'Context creation failed');
 });
