@@ -6,7 +6,6 @@ const OUT_FILE = 'Master_Social_Creds.xlsx';
 
 function generateMasterExcel() {
     // FORCE OVERWRITE FOR CREDENTIAL INJECTION
-    // if (fs.existsSync(OUT_FILE)) { console.log(`⚠️ ${OUT_FILE} already exists. Skipping.`); return; }
     if (fs.existsSync(OUT_FILE)) {
         try { fs.unlinkSync(OUT_FILE); } catch(e) { console.log("Old file locked/error"); }
     }
