@@ -21,23 +21,25 @@ async function sleep(ms) {
 }
 
 // --- CORE: Load Data ---
-function loadPendingJobs() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+function loadPendingJobs(deps = {}) {
+    const { fsLib = fs, xlsxLib = xlsx } = deps;
+
+    if (!fsLib.existsSync(EXCEL_PATH)) {
         log('ERROR', 'Excel file not found.');
-        return [];
+        return { workbook: null, pendingJobs: [] };
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsxLib.readFile(EXCEL_PATH);
     
     // Read Accounts
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
-    const accounts = xlsx.utils.sheet_to_json(accountsSheet);
+    const accounts = xlsxLib.utils.sheet_to_json(accountsSheet);
     const activeAccounts = accounts.filter(a => a.status === 'active');
     const accountMap = new Map(activeAccounts.map(a => [a.account_id, a]));
 
     // Read Calendar
     const calendarSheet = workbook.Sheets['CALENDAR'];
-    const posts = xlsx.utils.sheet_to_json(calendarSheet);
+    const posts = xlsxLib.utils.sheet_to_json(calendarSheet);
 
     const now = DateTime.now();
 
@@ -145,9 +147,10 @@ async function processJob(job, puppeteerLib = puppeteer) {
 }
 
 // --- CORE: Update Excel ---
-function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
+function updateJobStatus(workbook, postId, newStatus, errorMsg = '', deps = {}) {
+    const { xlsxLib = xlsx } = deps;
     const sheet = workbook.Sheets['CALENDAR'];
-    const data = xlsx.utils.sheet_to_json(sheet);
+    const data = xlsxLib.utils.sheet_to_json(sheet);
     
     const rowIndex = data.findIndex(row => row.post_id === postId);
     if (rowIndex === -1) return;
@@ -155,14 +158,17 @@ function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
     data[rowIndex].status = newStatus;
     if (errorMsg) data[rowIndex].error_log = errorMsg;
 
-    const newSheet = xlsx.utils.json_to_sheet(data);
+    const newSheet = xlsxLib.utils.json_to_sheet(data);
     workbook.Sheets['CALENDAR'] = newSheet;
-    
+}
+
+function saveWorkbook(workbook, deps = {}) {
+    const { xlsxLib = xlsx } = deps;
     // RETRY LOGIC FOR EXCEL WRITE
     let attempts = 0;
     while (attempts < 5) {
         try {
-            xlsx.writeFile(workbook, EXCEL_PATH);
+            xlsxLib.writeFile(workbook, EXCEL_PATH);
             break; // Success
         } catch (e) {
             if (e.code === 'EBUSY') {
@@ -178,15 +184,16 @@ function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
 }
 
 // --- ORCHESTRATOR ---
-async function runScheduler() {
+async function runScheduler(deps = {}) {
+    const { fsLib = fs, xlsxLib = xlsx, puppeteerLib = puppeteer, processJobFn = processJob } = deps;
     if (isRunning) return;
     isRunning = true;
 
     try {
         log('SYSTEM', 'Checking for pending jobs...');
-        const { workbook, pendingJobs } = loadPendingJobs();
+        const { workbook, pendingJobs } = loadPendingJobs({ fsLib, xlsxLib });
 
-        if (pendingJobs.length === 0) {
+        if (!pendingJobs || pendingJobs.length === 0) {
             log('SYSTEM', 'No pending jobs found.');
             isRunning = false;
             return;
@@ -199,13 +206,16 @@ async function runScheduler() {
         const workers = Array.from({ length: Math.min(MAX_CONCURRENT_WORKERS, queue.length) }, async () => {
             while (queue.length > 0) {
                 const job = queue.shift();
-                const result = await processJob(job);
+                const result = await processJobFn(job, puppeteerLib);
                 const status = result.success ? 'published' : 'failed';
-                updateJobStatus(workbook, job.post_id, status, result.error);
+                updateJobStatus(workbook, job.post_id, status, result.error, { xlsxLib });
             }
         });
 
         await Promise.all(workers);
+
+        // Save batch once
+        saveWorkbook(workbook, { xlsxLib });
 
     } catch (e) {
         log('CRITICAL', `Scheduler crashed: ${e.message}`);
@@ -215,7 +225,7 @@ async function runScheduler() {
     }
 }
 
-module.exports = { processJob };
+module.exports = { processJob, runScheduler, loadPendingJobs, updateJobStatus };
 
 if (require.main === module) {
     // Start
