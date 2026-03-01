@@ -3,6 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const { DateTime } = require('luxon');
 const puppeteer = require('puppeteer');
+const TWITTER_SELECTORS = require('./twitter_selectors.js');
 
 // Config
 const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
@@ -76,7 +77,7 @@ async function processJob(job, puppeteerLib = puppeteer) {
         // Wait until we see the "Post" composer or Home timeline
         // Selector for "Post" button in sidebar: [data-testid="SideNav_NewTweet_Button"]
         try {
-            await page.waitForSelector('div[data-testid="SideNav_NewTweet_Button"]', { timeout: 600000 }); // 10 minutes wait
+            await page.waitForSelector(TWITTER_SELECTORS.SIDE_NAV_NEW_TWEET_BUTTON, { timeout: 600000 }); // 10 minutes wait
             log('SYSTEM', '✅ Login detected! Taking control.');
         } catch(e) {
             log('ERROR', 'Login timeout. Moving to next.');
@@ -92,22 +93,22 @@ async function processJob(job, puppeteerLib = puppeteer) {
 
             // Click Reply (Simplest integration)
             // Selector for Reply icon often in [data-testid="reply"]
-            await page.click('div[data-testid="reply"]');
+            await page.click(TWITTER_SELECTORS.REPLY_BUTTON);
             await new Promise(r => setTimeout(r, 1000));
             
             await page.keyboard.type(content_text);
             await new Promise(r => setTimeout(r, 500));
             
-            await page.click('div[data-testid="tweetButton"]');
+            await page.click(TWITTER_SELECTORS.TWEET_BUTTON);
         } else {
             // NEW POST Mode
-            await page.click('a[aria-label="Post"]', { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
+            await page.click(TWITTER_SELECTORS.POST_ARIA_LABEL, { timeout: 5000 }).catch(() => page.goto('https://twitter.com/compose/tweet'));
             await new Promise(r => setTimeout(r, 2000));
             
             await page.keyboard.type(content_text);
             await new Promise(r => setTimeout(r, 1000));
             
-            await page.click('div[data-testid="tweetButton"]');
+            await page.click(TWITTER_SELECTORS.TWEET_BUTTON);
         }
         await new Promise(r => setTimeout(r, 5000)); // Wait for send
 
@@ -119,7 +120,7 @@ async function processJob(job, puppeteerLib = puppeteer) {
             if (handle.toLowerCase() === account.username.toLowerCase()) continue;
             try {
                 await page.goto(`https://twitter.com/${handle}`, { waitUntil: 'networkidle2' });
-                const [followBtn] = await page.$x("//button[contains(@aria-label, 'Follow') or contains(@aria-label, 'Seguir')]");
+                const [followBtn] = await page.$x(TWITTER_SELECTORS.FOLLOW_BUTTON_XPATH);
                 if (followBtn) {
                     const label = await page.evaluate(el => el.getAttribute('aria-label'), followBtn);
                     if (!label.includes('Following') && !label.includes('Siguiendo')) {
