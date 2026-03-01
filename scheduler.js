@@ -145,9 +145,15 @@ async function processJob(job, puppeteerLib = puppeteer) {
 }
 
 // --- CORE: Update Excel ---
-function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
+function syncSleep(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {}
+}
+
+function updateJobStatus(workbook, postId, newStatus, errorMsg = '', deps = {}) {
+    const { xlsxLib = xlsx, filePath = EXCEL_PATH, sleepFn = syncSleep } = deps;
     const sheet = workbook.Sheets['CALENDAR'];
-    const data = xlsx.utils.sheet_to_json(sheet);
+    const data = xlsxLib.utils.sheet_to_json(sheet);
     
     const rowIndex = data.findIndex(row => row.post_id === postId);
     if (rowIndex === -1) return;
@@ -155,21 +161,19 @@ function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
     data[rowIndex].status = newStatus;
     if (errorMsg) data[rowIndex].error_log = errorMsg;
 
-    const newSheet = xlsx.utils.json_to_sheet(data);
+    const newSheet = xlsxLib.utils.json_to_sheet(data);
     workbook.Sheets['CALENDAR'] = newSheet;
     
     // RETRY LOGIC FOR EXCEL WRITE
     let attempts = 0;
     while (attempts < 5) {
         try {
-            xlsx.writeFile(workbook, EXCEL_PATH);
+            xlsxLib.writeFile(workbook, filePath);
             break; // Success
         } catch (e) {
             if (e.code === 'EBUSY') {
                 attempts++;
-                // Synchronous sleep hack for simple retry
-                const start = Date.now();
-                while (Date.now() - start < 1000) {} 
+                sleepFn(1000);
             } else {
                 throw e; // Other error
             }
@@ -215,7 +219,7 @@ async function runScheduler() {
     }
 }
 
-module.exports = { processJob };
+module.exports = { processJob, updateJobStatus };
 
 if (require.main === module) {
     // Start
