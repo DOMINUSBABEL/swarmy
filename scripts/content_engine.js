@@ -11,6 +11,10 @@ const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 let genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 function generateMockPostText(persona, topic) {
+    if (persona.type === 'policy_analyst') {
+        return `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`;
+    }
+
     // Simulation of Natural Variation
     const variations = [
         `Just thinking about ${topic}... 🤔`,
@@ -23,8 +27,9 @@ function generateMockPostText(persona, topic) {
     // Identity Injection
     let text = variations[Math.floor(Math.random() * variations.length)];
     
-    if (persona.type === 'shitposter') text = text.toLowerCase().replace('.', '');
-    if (persona.type === 'policy_analyst') text = `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`;
+    if (persona.type === 'shitposter') {
+        text = text.toLowerCase().replace('.', '');
+    }
     
     return text;
 }
