@@ -63,19 +63,23 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
     }
 
     // Process sequentially to avoid RAM explosion
-    for (const soldier of squad) {
-        console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
-        
-        let browser;
-        try {
-            browser = await p.launch({
-                headless: false, // Visible for debugging/human-like behavior
-            });
-            
-            const page = await browser.newPage();
-            await page.setViewport({ width: 1280, height: 800 });
+    let browser;
+    try {
+        browser = await p.launch({
+            headless: false, // Visible for debugging/human-like behavior
+        });
 
-            // 1. LOGIN
+        for (const soldier of squad) {
+            console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
+            
+            let context;
+            try {
+                // Create a new incognito browser context for each soldier
+                context = await browser.createBrowserContext();
+                const page = await context.newPage();
+                await page.setViewport({ width: 1280, height: 800 });
+
+                // 1. LOGIN
             console.log("   🔑 Logging in...");
             await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
             
@@ -138,14 +142,18 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             }
 
             await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            // Browser will be closed in finally block
 
-        } catch (e) {
-            console.error(`   ❌ FAILED: ${e.message}`);
-        } finally {
-            if (browser) {
-                await browser.close();
+            } catch (e) {
+                console.error(`   ❌ FAILED: ${e.message}`);
+            } finally {
+                if (context) {
+                    await context.close();
+                }
             }
+        }
+    } finally {
+        if (browser) {
+            await browser.close();
         }
     }
 }

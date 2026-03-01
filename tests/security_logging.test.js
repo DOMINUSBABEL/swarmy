@@ -5,7 +5,21 @@ const assert = require('node:assert');
 test('Security Vulnerability: Sensitive Data Logging', async (t) => {
     // Mock puppeteer
     const dummyBrowser = {
-        newPage: async () => ({
+        createBrowserContext: async () => ({
+            newPage: async () => ({
+                setViewport: async () => {},
+                goto: async () => {},
+                waitForSelector: async () => ({ click: async () => {} }),
+                type: async () => {},
+                click: async () => {},
+                keyboard: { press: async () => {}, type: async () => {} },
+                waitForNavigation: async () => {},
+                $: async () => null, // element not found (like button)
+                close: async () => {}
+            }),
+            close: async () => {}
+        }),
+        newPage: async () => ({ // Fallback if old code called it directly
             setViewport: async () => {},
             goto: async () => {},
             waitForSelector: async () => ({ click: async () => {} }),
@@ -23,6 +37,7 @@ test('Security Vulnerability: Sensitive Data Logging', async (t) => {
     };
 
     // Override require cache for puppeteer
+    // Note: This is fragile if modules are already loaded, but works in isolated test runs
     const puppeteerPath = require.resolve('puppeteer');
     require.cache[puppeteerPath] = {
         id: puppeteerPath,
