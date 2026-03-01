@@ -53,24 +53,8 @@ async function generatePostText(persona, topic) {
     return generateMockPostText(persona, topic);
 }
 
-async function runContentEngine() {
-    if (!fs.existsSync(EXCEL_PATH)) {
-        console.error("❌ Excel not found.");
-        return;
-    }
-
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    
-    // Read Accounts & Identities
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    const activeAccounts = accounts.filter(a => a.status === 'active');
-
-    // Read Calendar to append new ideas
-    let calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
-
-    console.log(`🧠 Generating organic content for ${activeAccounts.length} active accounts...`);
-
-    for (const acc of activeAccounts) {
+async function generatePostsForAccounts(activeAccounts) {
+    return Promise.all(activeAccounts.map(async (acc) => {
         // Generate 1 new draft post per account
         const topic = acc.core_topics ? acc.core_topics.split(',')[0] : 'Life'; // Simple topic picker
         
@@ -87,8 +71,29 @@ async function runContentEngine() {
             hashtags: `#${topic.replace(' ', '')}`
         };
 
-        calendar.push(newPost);
+        return newPost;
+    }));
+}
+
+async function runContentEngine() {
+    if (!fs.existsSync(EXCEL_PATH)) {
+        console.error("❌ Excel not found.");
+        return;
     }
+
+    const workbook = xlsx.readFile(EXCEL_PATH);
+
+    // Read Accounts & Identities
+    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+    const activeAccounts = accounts.filter(a => a.status === 'active');
+
+    // Read Calendar to append new ideas
+    let calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+
+    console.log(`🧠 Generating organic content for ${activeAccounts.length} active accounts...`);
+
+    const newPosts = await generatePostsForAccounts(activeAccounts);
+    calendar.push(...newPosts);
 
     // Write back
     const newSheet = xlsx.utils.json_to_sheet(calendar);
@@ -104,6 +109,7 @@ if (require.main === module) {
 
 module.exports = {
     generatePostText,
+    generatePostsForAccounts,
     runContentEngine,
     // For testing
     setGenAI: (instance) => { genAI = instance; }
