@@ -1,4 +1,3 @@
-const fs = require('fs');
 const xlsx = require('xlsx');
 
 // Configuration
@@ -6,11 +5,6 @@ const OUT_FILE = 'Master_Social_Creds.xlsx';
 
 function generateMasterExcel() {
     // FORCE OVERWRITE FOR CREDENTIAL INJECTION
-    // if (fs.existsSync(OUT_FILE)) { console.log(`⚠️ ${OUT_FILE} already exists. Skipping.`); return; }
-    if (fs.existsSync(OUT_FILE)) {
-        try { fs.unlinkSync(OUT_FILE); } catch(e) { console.log("Old file locked/error"); }
-    }
-
     const workbook = xlsx.utils.book_new();
 
     // 1. ACCOUNTS Sheet - Injected Real Credentials
