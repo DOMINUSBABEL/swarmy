@@ -33,11 +33,15 @@ const TEMPLATES = [
 
 const TARGETS = ["@PalomaValenciaL", "@LuisGuillermoVl", "@AlvaroUribeVel", "la oposición"];
 
-function generatePoliticalBatch() {
-    if (!fs.existsSync(EXCEL_PATH)) return;
+function generatePoliticalBatch({
+    fileSystem = fs,
+    spreadsheet = xlsx,
+    filePath = EXCEL_PATH
+} = {}) {
+    if (!fileSystem.existsSync(filePath)) return;
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    let calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+    const workbook = spreadsheet.readFile(filePath);
+    let calendar = spreadsheet.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
 
     console.log(`🗳️ Generating 40 Political Tweets for ${TARGET_ACCOUNT}...`);
 
@@ -69,11 +73,17 @@ function generatePoliticalBatch() {
     }
 
     // Write back
-    const newSheet = xlsx.utils.json_to_sheet(calendar);
+    const newSheet = spreadsheet.utils.json_to_sheet(calendar);
     workbook.Sheets['CALENDAR'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    spreadsheet.writeFile(workbook, filePath);
 
     console.log(`✅ Loaded 40 posts into CALENDAR starting at ${startTime.toFormat('HH:mm')}.`);
+
+    return calendar; // Return for testing
 }
 
-generatePoliticalBatch();
+if (require.main === module) {
+    generatePoliticalBatch();
+}
+
+module.exports = { generatePoliticalBatch };
