@@ -33,7 +33,8 @@ const TEMPLATES = [
 
 const TARGETS = ["@PalomaValenciaL", "@LuisGuillermoVl", "@AlvaroUribeVel", "la oposición"];
 
-function generatePoliticalBatch() {
+function generatePoliticalBatch(deps = { fs: require('fs'), xlsx: require('xlsx') }) {
+    const { fs, xlsx } = deps;
     if (!fs.existsSync(EXCEL_PATH)) return;
 
     const workbook = xlsx.readFile(EXCEL_PATH);
@@ -76,4 +77,12 @@ function generatePoliticalBatch() {
     console.log(`✅ Loaded 40 posts into CALENDAR starting at ${startTime.toFormat('HH:mm')}.`);
 }
 
-generatePoliticalBatch();
+if (require.main === module) {
+    generatePoliticalBatch();
+}
+
+module.exports = {
+    generatePoliticalBatch,
+    TARGETS,
+    TEMPLATES
+};
