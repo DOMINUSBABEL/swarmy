@@ -21,23 +21,26 @@ async function sleep(ms) {
 }
 
 // --- CORE: Load Data ---
-function loadPendingJobs() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+function loadPendingJobs(deps = {}) {
+    const fsLib = deps.fs || fs;
+    const xlsxLib = deps.xlsx || xlsx;
+
+    if (!fsLib.existsSync(EXCEL_PATH)) {
         log('ERROR', 'Excel file not found.');
         return [];
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsxLib.readFile(EXCEL_PATH);
     
     // Read Accounts
     const accountsSheet = workbook.Sheets['ACCOUNTS'];
-    const accounts = xlsx.utils.sheet_to_json(accountsSheet);
+    const accounts = xlsxLib.utils.sheet_to_json(accountsSheet);
     const activeAccounts = accounts.filter(a => a.status === 'active');
     const accountMap = new Map(activeAccounts.map(a => [a.account_id, a]));
 
     // Read Calendar
     const calendarSheet = workbook.Sheets['CALENDAR'];
-    const posts = xlsx.utils.sheet_to_json(calendarSheet);
+    const posts = xlsxLib.utils.sheet_to_json(calendarSheet);
 
     const now = DateTime.now();
 
@@ -215,7 +218,7 @@ async function runScheduler() {
     }
 }
 
-module.exports = { processJob };
+module.exports = { processJob, loadPendingJobs };
 
 if (require.main === module) {
     // Start
