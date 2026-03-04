@@ -30,6 +30,10 @@ describe('swarm_attack.js', () => {
             }
         };
 
+        // Ensure the test environment has the expected variable so it reaches the login phase
+        const originalEnvPassword = process.env.ACC_SAMUEL_PASSWORD;
+        process.env.ACC_SAMUEL_PASSWORD = 'password';
+
         // Suppress console output to keep test output clean
         const originalConsoleError = console.error;
         const originalConsoleLog = console.log;
@@ -41,6 +45,12 @@ describe('swarm_attack.js', () => {
         } finally {
             console.error = originalConsoleError;
             console.log = originalConsoleLog;
+
+            if (originalEnvPassword !== undefined) {
+                process.env.ACC_SAMUEL_PASSWORD = originalEnvPassword;
+            } else {
+                delete process.env.ACC_SAMUEL_PASSWORD;
+            }
         }
 
         assert.strictEqual(browserClosed, true, 'Browser should be closed even if an error occurs');
