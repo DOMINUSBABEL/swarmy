@@ -53,20 +53,25 @@ async function generatePostText(persona, topic) {
     return generateMockPostText(persona, topic);
 }
 
-async function runContentEngine() {
-    if (!fs.existsSync(EXCEL_PATH)) {
+async function runContentEngine(deps = {}) {
+    const {
+        fs: fsInstance = fs,
+        xlsx: xlsxInstance = xlsx
+    } = deps;
+
+    if (!fsInstance.existsSync(EXCEL_PATH)) {
         console.error("❌ Excel not found.");
         return;
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
+    const workbook = xlsxInstance.readFile(EXCEL_PATH);
     
     // Read Accounts & Identities
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+    const accounts = xlsxInstance.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
     const activeAccounts = accounts.filter(a => a.status === 'active');
 
     // Read Calendar to append new ideas
-    let calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+    let calendar = xlsxInstance.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
 
     console.log(`🧠 Generating organic content for ${activeAccounts.length} active accounts...`);
 
@@ -91,9 +96,9 @@ async function runContentEngine() {
     }
 
     // Write back
-    const newSheet = xlsx.utils.json_to_sheet(calendar);
+    const newSheet = xlsxInstance.utils.json_to_sheet(calendar);
     workbook.Sheets['CALENDAR'] = newSheet;
-    xlsx.writeFile(workbook, EXCEL_PATH);
+    xlsxInstance.writeFile(workbook, EXCEL_PATH);
 
     console.log(`✅ Added ${activeAccounts.length} organic drafts to CALENDAR.`);
 }
