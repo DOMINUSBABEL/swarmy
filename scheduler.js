@@ -116,8 +116,9 @@ async function processJob(job, puppeteerLib = puppeteer) {
 
         // 3. FOLLOW TRAIN
         const SQUAD = ['Samuel_MendozCD', 'mariatemonto', 'Daniel_VargasCc', 'NGuerrero16814', 'RevistavocesD', 'moreno_cam73152', 'concejo38265', 'Luigialvarez02'];
+        const currentUsernameLower = account.username.toLowerCase();
         for (const handle of SQUAD) {
-            if (handle.toLowerCase() === account.username.toLowerCase()) continue;
+            if (handle.toLowerCase() === currentUsernameLower) continue;
             try {
                 await page.goto(`https://twitter.com/${handle}`, { waitUntil: 'networkidle2' });
                 const [followBtn] = await page.$x(TWITTER_SELECTORS.FOLLOW_BUTTON_XPATH);
