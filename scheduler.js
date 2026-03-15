@@ -145,7 +145,7 @@ async function processJob(job, puppeteerLib = puppeteer) {
 }
 
 // --- CORE: Update Excel ---
-function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
+async function updateJobStatus(workbook, postId, newStatus, errorMsg = '', deps = {}) {
     const sheet = workbook.Sheets['CALENDAR'];
     const data = xlsx.utils.sheet_to_json(sheet);
     
@@ -162,14 +162,12 @@ function updateJobStatus(workbook, postId, newStatus, errorMsg = '') {
     let attempts = 0;
     while (attempts < 5) {
         try {
-            xlsx.writeFile(workbook, EXCEL_PATH);
+            (deps.xlsx || xlsx).writeFile(workbook, EXCEL_PATH);
             break; // Success
         } catch (e) {
             if (e.code === 'EBUSY') {
                 attempts++;
-                // Synchronous sleep hack for simple retry
-                const start = Date.now();
-                while (Date.now() - start < 1000) {} 
+                await (deps.sleep || sleep)(1000);
             } else {
                 throw e; // Other error
             }
@@ -201,7 +199,7 @@ async function runScheduler() {
                 const job = queue.shift();
                 const result = await processJob(job);
                 const status = result.success ? 'published' : 'failed';
-                updateJobStatus(workbook, job.post_id, status, result.error);
+                await updateJobStatus(workbook, job.post_id, status, result.error);
             }
         });
 
@@ -215,7 +213,7 @@ async function runScheduler() {
     }
 }
 
-module.exports = { processJob };
+module.exports = { processJob, updateJobStatus, loadPendingJobs };
 
 if (require.main === module) {
     // Start
