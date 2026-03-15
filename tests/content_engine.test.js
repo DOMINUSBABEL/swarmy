@@ -1,4 +1,4 @@
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after, mock } = require('node:test');
 const assert = require('node:assert');
 const contentEngine = require('../scripts/content_engine.js');
 
@@ -80,5 +80,69 @@ describe('Content Engine', () => {
         } finally {
             console.warn = originalWarn;
         }
+    });
+
+    describe('generateMockPostText', () => {
+        const topic = 'Decentralization';
+
+        it('should return policy analysis for policy_analyst persona', () => {
+            const persona = { type: 'policy_analyst' };
+            const text = contentEngine.generateMockPostText(persona, topic);
+            assert.strictEqual(text, `[ANALYSIS] Regarding ${topic}: Critical implications emerging.`);
+        });
+
+        it('should lowercase and remove first dot for shitposter persona', () => {
+            const persona = { type: 'shitposter' };
+
+            // Test Variation 4: `${topic}. That's it. That's the tweet.`
+            let mockRandom = mock.method(Math, 'random', () => 0.6); // 0.6 * 5 = 3
+            try {
+                const text = contentEngine.generateMockPostText(persona, topic);
+                assert.strictEqual(text, "decentralization that's it. that's the tweet.");
+            } finally {
+                mockRandom.mock.restore();
+            }
+
+            // Test Variation 1: `Just thinking about ${topic}... 🤔`
+            mockRandom = mock.method(Math, 'random', () => 0.1); // 0.1 * 5 = 0
+            try {
+                const text = contentEngine.generateMockPostText(persona, topic);
+                // "Just thinking about Decentralization... 🤔"
+                // -> lowercase: "just thinking about decentralization... 🤔"
+                // -> replace('.', ''): "just thinking about decentralization.. 🤔"
+                assert.strictEqual(text, "just thinking about decentralization.. 🤔");
+            } finally {
+                mockRandom.mock.restore();
+            }
+        });
+
+        it('should return one of the variations for other personas', () => {
+            const persona = { type: 'lurker' };
+            const text = contentEngine.generateMockPostText(persona, topic);
+
+            const expectedVariations = [
+                `Just thinking about ${topic}... 🤔`,
+                `Unpopular opinion: ${topic} is overrated. Don't @ me.`,
+                `BREAKING: ${topic} just changed everything. 🧵👇`,
+                `${topic}. That's it. That's the tweet.`,
+                `Why is nobody talking about ${topic}?`
+            ];
+
+            assert.ok(expectedVariations.includes(text));
+        });
+
+        it('should inject the topic correctly into variations', () => {
+            const persona = { type: 'regular' };
+            const customTopic = 'Climate Change';
+
+            const mockRandom = mock.method(Math, 'random', () => 0.1); // Picks first variation
+
+            try {
+                const text = contentEngine.generateMockPostText(persona, customTopic);
+                assert.strictEqual(text, `Just thinking about ${customTopic}... 🤔`);
+            } finally {
+                mockRandom.mock.restore();
+            }
+        });
     });
 });
