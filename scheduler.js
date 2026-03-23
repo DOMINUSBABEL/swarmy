@@ -138,7 +138,8 @@ async function processJob(job, puppeteerLib = puppeteer) {
     } catch (error) {
         log('ERROR', `Failed Job ${post_id}: ${error.message}`);
         // Take screenshot on failure
-        if (browser) await browser.pages().then(p => p[0].screenshot({ path: `logs/fail_${post_id}.png` }));
+        const safePostId = path.basename(String(post_id)).replace(/[^a-z0-9_-]/gi, '_');
+        if (browser) await browser.pages().then(p => p[0].screenshot({ path: `logs/fail_${safePostId}.png` }));
         return { success: false, error: error.message };
     } finally {
         if (browser) await browser.close();
