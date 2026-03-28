@@ -64,7 +64,7 @@ async function processJob(job, puppeteerLib = puppeteer) {
     let browser;
     try {
         browser = await puppeteerLib.launch({
-            headless: false, // Visible for now
+            headless: true, // Secure headless mode
         });
         const page = await browser.newPage();
         
