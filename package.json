@@ -8,12 +8,11 @@
     "init": "node scripts/generate_master_excel.js",
     "test": "node --test tests/*.test.js",
     "post:twitter": "node scripts/post_twitter.js",
-    "post:instagram": "node scripts/post_instagram.js",
-    "test": "node --test tests/*.test.js"
+    "post:instagram": "node scripts/post_instagram.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "luxon": "^3.4.4",
     "puppeteer": "^24.2.1",
     "xlsx": "^0.18.5"
