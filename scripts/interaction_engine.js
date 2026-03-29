@@ -92,4 +92,8 @@ async function runInteractionPod() {
     console.log(`✅ Logged ${interactions.length} new interactions to perform.`);
 }
 
-runInteractionPod();
+if (require.main === module) {
+    runInteractionPod();
+}
+
+module.exports = { simulateInteraction, runInteractionPod };
