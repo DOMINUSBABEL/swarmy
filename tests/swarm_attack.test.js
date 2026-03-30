@@ -9,8 +9,14 @@ describe('swarm_attack.js', () => {
         let browserClosed = false;
 
         const mockBrowser = {
-            newPage: async () => {
-                throw new Error('Simulated failure in newPage');
+            createBrowserContext: async () => ({
+                newPage: async () => {
+                    throw new Error('Simulated failure in newPage');
+                },
+                close: async () => {}
+            }),
+            newPage: async () => { // Keep for backward compat if needed, though not used
+                throw new Error('Should not be called directly on browser');
             },
             close: async () => {
                 browserClosed = true;
