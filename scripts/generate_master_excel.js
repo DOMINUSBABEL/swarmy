@@ -7,7 +7,6 @@ const OUT_FILE = 'Master_Social_Creds.xlsx';
 
 function generateMasterExcel() {
     // FORCE OVERWRITE FOR CREDENTIAL INJECTION
-    // if (fs.existsSync(OUT_FILE)) { console.log(`⚠️ ${OUT_FILE} already exists. Skipping.`); return; }
     if (fs.existsSync(OUT_FILE)) {
         try { fs.unlinkSync(OUT_FILE); } catch(e) { console.log("Old file locked/error"); }
     }
@@ -34,8 +33,6 @@ function generateMasterExcel() {
         { account_id: 'acc_santiago', username: 'SPerdomito35341', password: process.env.MASTER_PASSWORD_GROUP_B || '', status: 'active', persona_type: 'policy_analyst' }
     ];
 
-    // Remove placeholder slots logic as we have enough real accounts
-    // for (let i = 5; i <= 10; i++) { ... }
     for (let i = 5; i <= 10; i++) {
         accountsData.push({
             account_id: `account_${String(i).padStart(2, '0')}`,
