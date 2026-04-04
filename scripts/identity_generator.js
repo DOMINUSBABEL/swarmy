@@ -51,10 +51,12 @@ function assignIdentities(deps = {}) {
 
     console.log(`🎭 Assigning identities to ${accounts.length} accounts...`);
 
+    const types = Object.keys(PERSONAS);
+    const typesLen = types.length;
+
     const updatedAccounts = accounts.map((acc, index) => {
         // Round-robin assignment of personas
-        const types = Object.keys(PERSONAS);
-        const type = types[index % types.length];
+        const type = types[index % typesLen];
         const persona = PERSONAS[type];
 
         // Randomly pick a bio if not set
