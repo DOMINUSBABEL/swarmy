@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 const { DateTime } = require('luxon');
 const puppeteer = require('puppeteer');
 const TWITTER_SELECTORS = require('./twitter_selectors.js');
+const { validateTargetUrl } = require('./scripts/swarm_attack.js');
 
 // Config
 const EXCEL_PATH = path.join(__dirname, 'Master_Social_Creds.xlsx');
@@ -86,6 +87,9 @@ async function processJob(job, puppeteerLib = puppeteer) {
 
         // 2. ACTION LOGIC
         if (job.target_url) {
+            // Validate the target URL before proceeding to prevent SSRF
+            validateTargetUrl(job.target_url);
+
             // REPLY / QUOTE Mode
             console.log(`   ↳ Target: ${job.target_url}`);
             await page.goto(job.target_url, { waitUntil: 'networkidle2' });
