@@ -1,8 +1,44 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { runSwarmAttack } = require('../scripts/swarm_attack.js');
+const { runSwarmAttack, validateTargetUrl } = require('../scripts/swarm_attack.js');
 
 describe('swarm_attack.js', () => {
+
+    describe('validateTargetUrl', () => {
+        test('validates valid twitter.com and x.com URLs', () => {
+            const validUrls = [
+                'https://x.com/luisguillermovl/status/2022646985677840818',
+                'http://twitter.com/anyuser/status/12345',
+                'https://www.x.com/post',
+                'http://www.twitter.com/test'
+            ];
+
+            for (const url of validUrls) {
+                assert.strictEqual(validateTargetUrl(url), url);
+            }
+        });
+
+        test('throws error for invalid protocols', () => {
+            const invalidProtocolUrl = 'ftp://x.com/test';
+            assert.throws(() => {
+                validateTargetUrl(invalidProtocolUrl);
+            }, /Invalid protocol: ftp:/);
+        });
+
+        test('throws error for invalid domains', () => {
+            const invalidDomainUrl = 'https://example.com/test';
+            assert.throws(() => {
+                validateTargetUrl(invalidDomainUrl);
+            }, /Invalid domain: example\.com/);
+        });
+
+        test('throws error for malformed inputs', () => {
+            const malformedUrl = 'not-a-url';
+            assert.throws(() => {
+                validateTargetUrl(malformedUrl);
+            }, /Invalid Target URL/);
+        });
+    });
 
     test('runSwarmAttack closes browser when error occurs', async () => {
         // Mock dependencies

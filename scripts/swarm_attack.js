@@ -158,4 +158,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { runSwarmAttack };
+module.exports = { runSwarmAttack, validateTargetUrl };
