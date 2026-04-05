@@ -31,27 +31,24 @@ async function simulateInteraction(actor, targetPost) {
     return action;
 }
 
-async function runInteractionPod() {
-    if (!fs.existsSync(EXCEL_PATH)) {
-        console.error("❌ Excel not found.");
-        return;
+/**
+ * Generates interactions for a given set of posts and accounts.
+ * @param {Array} recentPosts - Array of post objects.
+ * @param {Array} accounts - Array of account objects.
+ * @param {Object} options - Generation options.
+ * @param {boolean} options.verbose - Whether to log each interaction.
+ * @returns {Promise<Array>} - Array of generated interaction objects.
+ */
+async function generateInteractions(recentPosts, accounts, options = { verbose: false }) {
+    const interactions = [];
+    const accountMap = new Map();
+    for (const a of accounts) {
+        accountMap.set(a.account_id, a);
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
-    const calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
-    
-    // Filter published posts from the last 24h
-    // (Mock filter for now)
-    const recentPosts = calendar.filter(p => p.status === 'published' || p.status === 'draft'); // Using draft for testing
-
-    console.log(`🤝 Engagement Pod Active. Scanning ${recentPosts.length} posts...`);
-
-    const interactions = [];
-
     for (const post of recentPosts) {
-        // Find who posted it
-        const author = accounts.find(a => a.account_id === post.account_id);
+        // Find who posted it (O(1) lookup)
+        const author = accountMap.get(post.account_id);
         if (!author) continue;
 
         // Everyone else reacts
@@ -68,10 +65,32 @@ async function runInteractionPod() {
                     action_type: action,
                     timestamp: new Date().toISOString()
                 });
-                console.log(`   👉 ${actor.username} (${actor.persona_type}) -> ${action} -> Post by ${author.username}`);
+
+                if (options.verbose) {
+                    console.log(`   👉 ${actor.username} (${actor.persona_type}) -> ${action} -> Post by ${author.username}`);
+                }
             }
         }
     }
+    return interactions;
+}
+
+async function runInteractionPod() {
+    if (!fs.existsSync(EXCEL_PATH)) {
+        console.error("❌ Excel not found.");
+        return;
+    }
+
+    const workbook = xlsx.readFile(EXCEL_PATH);
+    const accounts = xlsx.utils.sheet_to_json(workbook.Sheets['ACCOUNTS']);
+    const calendar = xlsx.utils.sheet_to_json(workbook.Sheets['CALENDAR']);
+
+    // Filter published posts from the last 24h
+    const recentPosts = calendar.filter(p => p.status === 'published' || p.status === 'draft'); // Using draft for testing
+
+    console.log(`🤝 Engagement Pod Active. Scanning ${recentPosts.length} posts...`);
+
+    const interactions = await generateInteractions(recentPosts, accounts, { verbose: true });
 
     // Save interactions to a new sheet? Or just log them for the scheduler to pick up?
     // For V4, let's create an INTERACTIONS sheet.
@@ -92,4 +111,12 @@ async function runInteractionPod() {
     console.log(`✅ Logged ${interactions.length} new interactions to perform.`);
 }
 
-runInteractionPod();
+if (require.main === module) {
+    runInteractionPod();
+}
+
+module.exports = {
+    simulateInteraction,
+    generateInteractions,
+    runInteractionPod
+};
