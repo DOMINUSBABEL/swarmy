@@ -105,6 +105,7 @@ if (require.main === module) {
 module.exports = {
     generatePostText,
     runContentEngine,
+    generateMockPostText,
     // For testing
     setGenAI: (instance) => { genAI = instance; }
 };
