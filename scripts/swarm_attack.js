@@ -62,92 +62,107 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
         return;
     }
 
-    // Process sequentially to avoid RAM explosion
+    // Process with limited concurrency to avoid RAM explosion
+    const CONCURRENCY_LIMIT = 3;
+    const activePromises = new Set();
+    const results = [];
+
     for (const soldier of squad) {
-        console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
-        
-        let browser;
-        try {
-            browser = await p.launch({
-                headless: false, // Visible for debugging/human-like behavior
-            });
+        const promise = (async () => {
+            console.log(`\n🪖 DEPLOYING: ${soldier.account_id}`);
             
-            const page = await browser.newPage();
-            await page.setViewport({ width: 1280, height: 800 });
+            let browser;
+            try {
+                browser = await p.launch({
+                    headless: false, // Visible for debugging/human-like behavior
+                });
 
-            // 1. LOGIN
-            console.log("   🔑 Logging in...");
-            await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
-            
-            // Wait for username input
-            await page.waitForSelector(TWITTER_SELECTORS.USERNAME_INPUT);
-            await page.type(TWITTER_SELECTORS.USERNAME_INPUT, soldier.username);
-            await new Promise(r => setTimeout(r, 500)); 
-            
-            // Click NEXT button (Crucial Step)
-            // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
-            // X often uses a 'span' inside a div with role='button'.
-            // Let's use Puppeteer's text selector or reliable xpath
-            const nextButton = await page.waitForSelector(TWITTER_SELECTORS.NEXT_BUTTON_XPATH);
-            if (nextButton) {
-                await nextButton.click();
-            } else {
-                // Fallback: Press Enter
-                await page.keyboard.press('Enter');
-            }
-            
-            await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+                const page = await browser.newPage();
+                await page.setViewport({ width: 1280, height: 800 });
 
-            // Wait for password input
-            await page.waitForSelector(TWITTER_SELECTORS.PASSWORD_INPUT, { visible: true, timeout: 5000 });
-            await page.type(TWITTER_SELECTORS.PASSWORD_INPUT, soldier.password);
-            await page.keyboard.press('Enter');
-            
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
-            console.log("   ✅ Login successful.");
+                // 1. LOGIN
+                console.log(`   🔑 Logging in [${soldier.account_id}]...`);
+                await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
 
-            // 2. NAVIGATE TO TARGET
-            console.log("   🎯 Navigating to target...");
-            // Use the validated targetUrl here
-            await page.goto(targetUrl, { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 3000)); // Human pause
-
-            // 3. ACTION (Reply/Like)
-            // Like
-            if (await page.$(TWITTER_SELECTORS.LIKE_BUTTON)) {
-                await page.click(TWITTER_SELECTORS.LIKE_BUTTON);
-                console.log("   ❤️ Liked.");
-            }
-
-            // Reply
-            const comment = COMMENTS[soldier.account_id];
-            if (comment) {
-                console.log(`   💬 Replying: "${comment}"`);
-                
-                // Click reply box (this selector is tricky and changes often, generic approach)
-                // Focusing on the contenteditable div usually works
-                await page.click(TWITTER_SELECTORS.REPLY_BUTTON); // Open modal or focus
-                await new Promise(r => setTimeout(r, 1000));
-                
-                await page.keyboard.type(comment);
+                // Wait for username input
+                await page.waitForSelector(TWITTER_SELECTORS.USERNAME_INPUT);
+                await page.type(TWITTER_SELECTORS.USERNAME_INPUT, soldier.username);
                 await new Promise(r => setTimeout(r, 500));
-                
-                // Click Reply button
-                await page.click(TWITTER_SELECTORS.TWEET_BUTTON);
-                console.log("   🚀 Reply sent.");
-            }
 
-            await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
-            // Browser will be closed in finally block
+                // Click NEXT button (Crucial Step)
+                // Strategy: Find all buttons, look for "Next" or "Siguiente" text, or use precise XPath if needed.
+                // X often uses a 'span' inside a div with role='button'.
+                // Let's use Puppeteer's text selector or reliable xpath
+                const nextButton = await page.waitForSelector(TWITTER_SELECTORS.NEXT_BUTTON_XPATH);
+                if (nextButton) {
+                    await nextButton.click();
+                } else {
+                    // Fallback: Press Enter
+                    await page.keyboard.press('Enter');
+                }
 
-        } catch (e) {
-            console.error(`   ❌ FAILED: ${e.message}`);
-        } finally {
-            if (browser) {
-                await browser.close();
+                await new Promise(r => setTimeout(r, 2000)); // Wait for transition
+
+                // Wait for password input
+                await page.waitForSelector(TWITTER_SELECTORS.PASSWORD_INPUT, { visible: true, timeout: 5000 });
+                await page.type(TWITTER_SELECTORS.PASSWORD_INPUT, soldier.password);
+                await page.keyboard.press('Enter');
+
+                await page.waitForNavigation({ waitUntil: 'networkidle2' });
+                console.log(`   ✅ Login successful [${soldier.account_id}].`);
+
+                // 2. NAVIGATE TO TARGET
+                console.log(`   🎯 Navigating to target [${soldier.account_id}]...`);
+                // Use the validated targetUrl here
+                await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+                await new Promise(r => setTimeout(r, 3000)); // Human pause
+
+                // 3. ACTION (Reply/Like)
+                // Like
+                if (await page.$(TWITTER_SELECTORS.LIKE_BUTTON)) {
+                    await page.click(TWITTER_SELECTORS.LIKE_BUTTON);
+                    console.log(`   ❤️ Liked [${soldier.account_id}].`);
+                }
+
+                // Reply
+                const comment = COMMENTS[soldier.account_id];
+                if (comment) {
+                    console.log(`   💬 Replying [${soldier.account_id}]: "${comment}"`);
+
+                    // Click reply box (this selector is tricky and changes often, generic approach)
+                    // Focusing on the contenteditable div usually works
+                    await page.click(TWITTER_SELECTORS.REPLY_BUTTON); // Open modal or focus
+                    await new Promise(r => setTimeout(r, 1000));
+
+                    await page.keyboard.type(comment);
+                    await new Promise(r => setTimeout(r, 500));
+
+                    // Click Reply button
+                    await page.click(TWITTER_SELECTORS.TWEET_BUTTON);
+                    console.log(`   🚀 Reply sent [${soldier.account_id}].`);
+                }
+
+                await new Promise(r => setTimeout(r, 5000)); // Wait to ensure send
+
+            } catch (e) {
+                console.error(`   ❌ FAILED [${soldier.account_id}]: ${e.message}`);
+            } finally {
+                if (browser) {
+                    await browser.close();
+                }
             }
+        })();
+
+        results.push(promise);
+        activePromises.add(promise);
+        promise.finally(() => activePromises.delete(promise));
+
+        if (activePromises.size >= CONCURRENCY_LIMIT) {
+            await Promise.race(activePromises);
         }
     }
+
+    await Promise.all(results);
 }
 
 if (require.main === module) {
