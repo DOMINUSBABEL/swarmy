@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const xlsx = require('xlsx');
+require('dotenv').config();
 const TWITTER_SELECTORS = require('../twitter_selectors.js');
 
 // CONFIG
@@ -98,9 +99,17 @@ async function runSwarmAttack(targetUrlOrDeps = DEFAULT_TARGET_URL, deps = {}) {
             
             await new Promise(r => setTimeout(r, 2000)); // Wait for transition
 
+            // Look up password securely from environment variables
+            const envVarName = `${soldier.account_id.toUpperCase()}_PASSWORD`;
+            const accountPassword = process.env[envVarName] || process.env.MASTER_PASSWORD_GROUP_B;
+
+            if (!accountPassword) {
+                throw new Error(`🔒 SEC-ERR: No environment password configured for ${soldier.account_id}. Skipping login.`);
+            }
+
             // Wait for password input
             await page.waitForSelector(TWITTER_SELECTORS.PASSWORD_INPUT, { visible: true, timeout: 5000 });
-            await page.type(TWITTER_SELECTORS.PASSWORD_INPUT, soldier.password);
+            await page.type(TWITTER_SELECTORS.PASSWORD_INPUT, accountPassword);
             await page.keyboard.press('Enter');
             
             await page.waitForNavigation({ waitUntil: 'networkidle2' });
