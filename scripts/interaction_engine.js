@@ -5,30 +5,71 @@ const xlsx = require('xlsx');
 // Configuration
 const EXCEL_PATH = path.join(__dirname, '../Master_Social_Creds.xlsx');
 
-// MOCK INTERACTION LOGIC
+const PERSONA_TRAITS = {
+    'policy_analyst': {
+        interests: ['politics', 'news', 'economics', 'urbanism'],
+        weights: { LIKE: 0.3, RETWEET: 0.2, REPLY: 0.4, SKIP: 0.1 }
+    },
+    'coffee_snob': {
+        interests: ['lifestyle', 'culture', 'coffee', 'art'],
+        weights: { LIKE: 0.6, RETWEET: 0.1, REPLY: 0.1, SKIP: 0.2 }
+    },
+    'tech_visionary': {
+        interests: ['tech', 'future', 'ai', 'crypto', 'science'],
+        weights: { LIKE: 0.4, RETWEET: 0.3, REPLY: 0.1, SKIP: 0.2 }
+    },
+    'shitposter': {
+        interests: ['memes', 'rant', 'politics', 'crypto', 'shitpost'],
+        weights: { LIKE: 0.2, RETWEET: 0.4, REPLY: 0.3, SKIP: 0.1 }
+    },
+    'news_outlet': {
+        interests: ['politics', 'news', 'world', 'breaking'],
+        weights: { LIKE: 0.1, RETWEET: 0.8, REPLY: 0.0, SKIP: 0.1 }
+    },
+    'general': {
+        interests: ['general', 'lifestyle', 'news'],
+        weights: { LIKE: 0.5, RETWEET: 0.1, REPLY: 0.1, SKIP: 0.3 }
+    }
+};
+
 async function simulateInteraction(actor, targetPost) {
+    const persona = PERSONA_TRAITS[actor.persona_type] || PERSONA_TRAITS['general'];
+    const postTopic = (targetPost.topic || 'general').toLowerCase();
+
+    // Calculate Interest Score
+    // 1. Exact match or substring match in interests
+    const isInterested = persona.interests.some(interest => postTopic.includes(interest));
+    
+    // 2. Adjust weights based on interest
+    let weights = { ...persona.weights };
+    
+    if (!isInterested) {
+        // If not interested, significantly increase SKIP chance
+        // Reduce other actions
+        weights.LIKE *= 0.5;
+        weights.RETWEET *= 0.2;
+        weights.REPLY *= 0.1;
+        weights.SKIP = 1 - (weights.LIKE + weights.RETWEET + weights.REPLY);
+
+        // Ensure SKIP isn't negative (edge case) or too low
+        if (weights.SKIP < 0.5) weights.SKIP = 0.8;
+    }
+
+    // Normalize weights to sum to 1
+    const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+
     const actions = ['LIKE', 'RETWEET', 'REPLY', 'SKIP'];
-    const weights = [0.6, 0.1, 0.1, 0.2]; // 60% like, 10% RT, 10% Reply, 20% Skip
-    
-    // Simple weighted random
-    let random = Math.random();
-    let action = 'SKIP';
-    
-    let sum = 0;
-    for (let i = 0; i < actions.length; i++) {
-        sum += weights[i];
-        if (random <= sum) {
-            action = actions[i];
-            break;
+    let random = Math.random() * totalWeight;
+
+    for (const action of actions) {
+        const weight = weights[action] || 0;
+        if (random <= weight) {
+            return action;
         }
+        random -= weight;
     }
 
-    // Contextual Override: Coffee Snob shouldn't RT Crypto Degen usually
-    if (actor.persona_type === 'coffee_snob' && targetPost.topic === 'Crypto') {
-        action = 'SKIP';
-    }
-
-    return action;
+    return 'SKIP';
 }
 
 async function runInteractionPod() {
@@ -59,7 +100,17 @@ async function runInteractionPod() {
             if (actor.account_id === author.account_id) continue; // Don't like own post (usually)
             if (actor.status !== 'active') continue;
 
-            const action = await simulateInteraction(actor, { topic: author.core_topics ? author.core_topics.split(',')[0] : 'General' });
+            // Determine topic priority: Post Line ID > Author Core Topics > Author Content Lines > General
+            let topic = 'General';
+            if (post.line_id) {
+                topic = post.line_id;
+            } else if (author.core_topics) {
+                topic = author.core_topics.split(',')[0];
+            } else if (author.content_lines) {
+                topic = author.content_lines.split(',')[0];
+            }
+
+            const action = await simulateInteraction(actor, { topic: topic.trim() });
             
             if (action !== 'SKIP') {
                 interactions.push({
@@ -92,4 +143,11 @@ async function runInteractionPod() {
     console.log(`✅ Logged ${interactions.length} new interactions to perform.`);
 }
 
-runInteractionPod();
+if (require.main === module) {
+    runInteractionPod();
+}
+
+module.exports = {
+    simulateInteraction,
+    runInteractionPod
+};
