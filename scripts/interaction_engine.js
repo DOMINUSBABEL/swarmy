@@ -49,17 +49,26 @@ async function runInteractionPod() {
 
     const interactions = [];
 
+    // Optimize: Create Map for O(1) lookup
+    const accountMap = new Map();
+    for (const a of accounts) {
+        accountMap.set(a.account_id, a);
+    }
+
     for (const post of recentPosts) {
         // Find who posted it
-        const author = accounts.find(a => a.account_id === post.account_id);
+        const author = accountMap.get(post.account_id);
         if (!author) continue;
+
+        // Hoist topic extraction
+        const topic = author.core_topics ? author.core_topics.split(',')[0] : 'General';
 
         // Everyone else reacts
         for (const actor of accounts) {
             if (actor.account_id === author.account_id) continue; // Don't like own post (usually)
             if (actor.status !== 'active') continue;
 
-            const action = await simulateInteraction(actor, { topic: author.core_topics ? author.core_topics.split(',')[0] : 'General' });
+            const action = await simulateInteraction(actor, { topic: topic });
             
             if (action !== 'SKIP') {
                 interactions.push({
@@ -84,7 +93,11 @@ async function runInteractionPod() {
     }
     
     // Remove old sheet if exists to replace
-    if (workbook.Sheets['INTERACTIONS']) delete workbook.Sheets['INTERACTIONS'];
+    const existingSheetIndex = workbook.SheetNames.indexOf('INTERACTIONS');
+    if (existingSheetIndex >= 0) {
+        workbook.SheetNames.splice(existingSheetIndex, 1);
+        delete workbook.Sheets['INTERACTIONS'];
+    }
     
     xlsx.utils.book_append_sheet(workbook, interactionSheet, 'INTERACTIONS');
     xlsx.writeFile(workbook, EXCEL_PATH);
